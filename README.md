@@ -1,1 +1,47 @@
-# CSE540-BlockchainGroupProject
+# The Honest Harvest | CSE540 - Blockchain Project
+---
+
+**The Honest Harvest** is a blockchain-based solution that tracks the entire lifecycle of food products from farm to table to increase its traceability. By using a shared, decentralized ledger, all stakeholders in the food supply chain can record transactions securely and transparently.
+
+Each product batch is assigned a unique digital ID, creating a unique, tamper-proof record. Furthermore, blockchain technology's automated digital rules allows for the replacement of slow, error-prone paper trails.
+
+With the **Honest Harvest**, consumers can simply scan a code on a product in the store to view its complete path to get there. This eliminates the uncertainty of food supply and increases the mutual trust between consumers and suppliers.
+
+## Table of Contents
+---
+- [About Us](#aboutus)
+- [Technology](#technology)
+- [Getting Started](#gettingstarted)
+
+## About Us 
+---
+**The Honest Harvest" is a project created by Alan Zygutis, Joshua Burgess, Donavan Doan, Manasi Patil, and Sejal Patil for the CSE540 Blockchain course. 
+
+## Technology 
+---
+![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=white)
+![Solidity](https://img.shields.io/badge/Solidity-0A6B9F?style=flat&logo=solidity&logoColor=white)
+![Remix IDE](https://img.shields.io/badge/Remix_IDE-121212?style=flat&logo=remix&logoColor=white)
+![MetaMask](https://img.shields.io/badge/MetaMask-F6851B?style=flat&logo=metamask&logoColor=white)
+![Docker Image Size](https://img.shields.io/docker/image-size/yourusername/yourimage/latest.svg)
+
+## Getting Started 
+--- 
+### Prerequisites
+- Docker: for containerizing the application
+
+### Setting Up the Project
+1. Clone the repo
+    ```sh 
+    git clone https://github.com/Jman001188/CSE540-BlockchainGroupProject.git
+    ```
+2. Start the Docker Application 
+    ```sh
+    docker-compose up --build
+    ```
+
+3. Access the Application 
+    - **Backend**: Your Go backend should now be running on http://localhost:8080
+    - **Frontend**: Your React (Next.js) frontend should now be running on http://localhost:3000
