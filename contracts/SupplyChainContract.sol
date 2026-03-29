@@ -28,13 +28,13 @@ contract SupplyChainContract {
 	mapping (uint32 => Item) items;
 	
 	// Inputs args that contain things like item name and the hash of its data
-	function registerItem () {
+	function registerItem () public {
 		// Creates a new Item with the given information and appends it to the Contract's items map. 
 		// Emits information for the off-chain database/s once complete via the NewItemInformation event
 	}
 	
 	// Inputs args that contain things like item being transfered (by ID), the owner and recipient to create a transaction.
-	function transferItem () {
+	function transferItem () public {
 		// Item's owner will be changed to the recipient. 
 		// Off-chain information will be emitted via the TransferItemInformation event.
 	}
