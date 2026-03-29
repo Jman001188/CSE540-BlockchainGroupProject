@@ -31,13 +31,13 @@ With the **Honest Harvest**, consumers can simply scan a code on a product in th
 
 This project uses the following major dependencies and tools:
 
-Docker and Docker Compose for containerized setup
-Go modules for backend dependency management
-Node.js and npm for frontend dependency management
-React / Next.js for the frontend
-MetaMask for blockchain wallet interaction
-Solidity smart contracts developed in Remix IDE
-ethers.js or web3.js for frontend blockchain communication, if applicable
+- Docker and Docker Compose for containerized setup
+- Go modules for backend dependency management
+- Node.js and npm for frontend dependency management
+- React / Next.js for the frontend
+- MetaMask for blockchain wallet interaction
+- Solidity smart contracts developed in Remix IDE
+- ethers.js or web3.js for frontend blockchain communication, if applicable
 
 Most dependencies are installed automatically through Docker during setup. If running components outside Docker, users may need to install Node.js, npm, Go, and MetaMask manually.
 
