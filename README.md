@@ -29,7 +29,17 @@ With the **Honest Harvest**, consumers can simply scan a code on a product in th
 
 ## Dependencies
 
-All necessary dependencies for this project are automatically handled during the installation process. 
+This project uses the following major dependencies and tools:
+
+Docker and Docker Compose for containerized setup
+Go modules for backend dependency management
+Node.js and npm for frontend dependency management
+React / Next.js for the frontend
+MetaMask for blockchain wallet interaction
+Solidity smart contracts developed in Remix IDE
+ethers.js or web3.js for frontend blockchain communication, if applicable
+
+Most dependencies are installed automatically through Docker during setup. If running components outside Docker, users may need to install Node.js, npm, Go, and MetaMask manually.
 
 ### Docker
 When using Docker, simply running the `docker-compose up` or `docker build` command will automatically pull and install the necessary dependencies for the project.
