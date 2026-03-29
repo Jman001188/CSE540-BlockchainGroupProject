@@ -1,5 +1,5 @@
 # The Honest Harvest | CSE540 - Blockchain Project
----
+
 
 **The Honest Harvest** is a blockchain-based solution that tracks the entire lifecycle of food products from farm to table to increase its traceability. By using a shared, decentralized ledger, all stakeholders in the food supply chain can record transactions securely and transparently.
 
@@ -8,27 +8,35 @@ Each product batch is assigned a unique digital ID, creating a unique, tamper-pr
 With the **Honest Harvest**, consumers can simply scan a code on a product in the store to view its complete path to get there. This eliminates the uncertainty of food supply and increases the mutual trust between consumers and suppliers.
 
 ## Table of Contents
----
+
 - [About Us](#aboutus)
 - [Technology](#technology)
+- [Dependencies](#dependencies)
 - [Getting Started](#gettingstarted)
 
 ## About Us 
----
-**The Honest Harvest" is a project created by Alan Zygutis, Joshua Burgess, Donavan Doan, Manasi Patil, and Sejal Patil for the CSE540 Blockchain course. 
+
+**The Honest Harvest** is a project created by Alan Zygutis, Joshua Burgess, Donavan Doan, Manasi Patil, and Sejal Patil for the CSE540 Blockchain course. 
 
 ## Technology 
----
+
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=white)
 ![Solidity](https://img.shields.io/badge/Solidity-0A6B9F?style=flat&logo=solidity&logoColor=white)
 ![Remix IDE](https://img.shields.io/badge/Remix_IDE-121212?style=flat&logo=remix&logoColor=white)
 ![MetaMask](https://img.shields.io/badge/MetaMask-F6851B?style=flat&logo=metamask&logoColor=white)
-![Docker Image Size](https://img.shields.io/docker/image-size/yourusername/yourimage/latest.svg)
+
+## Dependencies
+
+All necessary dependencies for this project are automatically handled during the installation process. 
+
+### Docker
+When using Docker, simply running the `docker-compose up` or `docker build` command will automatically pull and install the necessary dependencies for the project.
+
 
 ## Getting Started 
---- 
+ 
 ### Prerequisites
 - Docker: for containerizing the application
 
