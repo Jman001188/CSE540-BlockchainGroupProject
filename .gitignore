@@ -1,4 +1,10 @@
+.states
+artifacts
+
 node_modules/
-.env
-dist/
+frontend/node_modules/
+backend/node_modules/
+
 .next/
+frontend/.next/
+
