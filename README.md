@@ -55,11 +55,11 @@ When using Docker, simply running the `docker-compose up` or `docker build` comm
     ```sh 
     git clone https://github.com/Jman001188/CSE540-BlockchainGroupProject.git
     ```
-2. Start the Docker Application - ***This step is not currently implemented***
+2. Start the Docker Application
     ```sh
     docker-compose up --build
     ```
-3. Access the Application - ***This step is not currently implemented***
+3. Access the Application
     - **Backend**: Your Go backend should now be running on http://localhost:8080
     - **Frontend**: Your React (Next.js) frontend should now be running on http://localhost:3000
 ```
