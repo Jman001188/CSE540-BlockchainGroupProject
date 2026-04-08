@@ -210,7 +210,7 @@ Completes the hand-off (triggers the blockchain transaction).
 This flowchart shows how data moves through the Honest Harvest system. 
 *(If you are viewing this in VS Code, open the Markdown Preview to see the interactive diagram!)*
 
-```
+```mermaid
 graph LR
     %% Styling
     classDef endpoint fill:#2b3a42,stroke:#5c8397,stroke-width:2px,color:#fff,rx:5px,ry:5px;
@@ -223,40 +223,40 @@ graph LR
     DB_USER[(Users DB)]:::db
     DB_CHAIN[(Supply Chain DB)]:::db
 
-    subgraph Group1 [&quot;🏢 Company Management&quot;]
+    subgraph Group1 [Company Management]
         direction LR
-        C_IN[&quot;Input: {name, permission}&quot;]:::input --&gt; POST_COMP[&quot;POST /company&quot;]:::endpoint
-        POST_COMP --&gt; DB_COMP
-        DB_COMP --&gt; C_OUT[&quot;Output: {company_id, ...}&quot;]:::output
+        C_IN["Input: {name, permission}"]:::input --> POST_COMP["POST /company"]:::endpoint
+        POST_COMP --> DB_COMP
+        DB_COMP --> C_OUT["Output: {company_id, ...}"]:::output
 
-        G_IN[&quot;Input: URL param :companyId&quot;]:::input --&gt; GET_COMP[&quot;GET /company/:companyId&quot;]:::endpoint
-        GET_COMP --&gt; DB_COMP
-        DB_COMP --&gt; G_OUT[&quot;Output: {Company Details}&quot;]:::output
+        G_IN["Input: URL param :companyId"]:::input --> GET_COMP["GET /company/:companyId"]:::endpoint
+        GET_COMP --> DB_COMP
+        DB_COMP --> G_OUT["Output: {Company Details}"]:::output
     end
 
-    subgraph Group2 [&quot;🔐 Users &amp; Authentication&quot;]
+    subgraph Group2 [Users and Authentication]
         direction LR
-        R_IN[&quot;Input: {email, password, companyId...}&quot;]:::input --&gt; POST_REG[&quot;POST /auth/register&quot;]:::endpoint
-        POST_REG --&gt; DB_USER
-        DB_USER --&gt; R_OUT[&quot;Output: {userId, token}&quot;]:::output
+        R_IN["Input: {email, password, companyId...}"]:::input --> POST_REG["POST /auth/register"]:::endpoint
+        POST_REG --> DB_USER
+        DB_USER --> R_OUT["Output: {userId, token}"]:::output
 
-        L_IN[&quot;Input: {email, password}&quot;]:::input --&gt; POST_LOG[&quot;POST /auth/login&quot;]:::endpoint
-        POST_LOG --&gt; DB_USER
-        DB_USER --&gt; L_OUT[&quot;Output: {sessionToken, User Profile}&quot;]:::output
+        L_IN["Input: {email, password}"]:::input --> POST_LOG["POST /auth/login"]:::endpoint
+        POST_LOG --> DB_USER
+        DB_USER --> L_OUT["Output: {sessionToken, User Profile}"]:::output
     end
 
-    subgraph Group3 [&quot;📦 Supply Chain &amp; Transfers&quot;]
+    subgraph Group3 [Supply Chain and Transfers]
         direction LR
-        B_IN[&quot;Auth: Bearer Token<br>Input: {batchId, productName}&quot;]:::input --&gt; POST_BATCH[&quot;POST /api/batches&quot;]:::endpoint
-        POST_BATCH --&gt; DB_CHAIN
-        DB_CHAIN --&gt; B_OUT[&quot;Output: {Batch Details}&quot;]:::output
+        B_IN["Auth: Bearer Token, Input: {batchId...}"]:::input --> POST_BATCH["POST /api/batches"]:::endpoint
+        POST_BATCH --> DB_CHAIN
+        DB_CHAIN --> B_OUT["Output: {Batch Details}"]:::output
 
-        T_IN[&quot;Input: {batchId, from, to, sender}&quot;]:::input --&gt; POST_TRANS[&quot;POST /transfers/pending&quot;]:::endpoint
-        POST_TRANS --&gt; DB_CHAIN
-        DB_CHAIN --&gt; T_OUT[&quot;Output: {Pending Transfer}&quot;]:::output
+        T_IN["Input: {batchId, from, to, sender}"]:::input --> POST_TRANS["POST /transfers/pending"]:::endpoint
+        POST_TRANS --> DB_CHAIN
+        DB_CHAIN --> T_OUT["Output: {Pending Transfer}"]:::output
 
-        A_IN[&quot;Input: URL param :transferId&quot;]:::input --&gt; POST_ACC[&quot;POST /transfers/:id/accept&quot;]:::endpoint
-        POST_ACC --&gt; DB_CHAIN
-        DB_CHAIN --&gt; A_OUT[&quot;Output: {Accepted Status}&quot;]:::output
+        A_IN["Input: URL param :transferId"]:::input --> POST_ACC["POST /transfers/:id/accept"]:::endpoint
+        POST_ACC --> DB_CHAIN
+        DB_CHAIN --> A_OUT["Output: {Accepted Status}"]:::output
     end
 ```
