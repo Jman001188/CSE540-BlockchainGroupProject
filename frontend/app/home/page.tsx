@@ -17,6 +17,7 @@ const actions = [
     <div className="grid grid-cols-3 gap-6 pt-10">
         {actions.map((currentAction) => (
           <Card
+            key={currentAction.route}
             action={currentAction.action}
             route={currentAction.route}
           />

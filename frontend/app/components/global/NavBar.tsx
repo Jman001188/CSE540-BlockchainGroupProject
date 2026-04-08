@@ -40,7 +40,7 @@ const handleLogin = () => {
                 <li><a>Item 3</a></li>
             </ul>
             </div>
-            <button className="btn btn-ghost text-xl" onClick={() => router.push("/")} >Home</button>
+            <button className="btn btn-ghost text-xl" onClick={() => router.push("/home")} >Home</button>
         </div>
         <div className="navbar-center hidden lg:flex">
             <ul className="menu menu-horizontal px-1">

@@ -15,6 +15,7 @@ export default function LoginForm() {
             <input type="password" className="input" placeholder="Password" />
 
             <button className="btn btn-neutral mt-4" onClick={() => router.push("/home")}>Login</button>
+            <button className="btn btn-neutral mt-4" onClick={() => router.push("/register")}>Register</button>
         </fieldset>
     )
 }

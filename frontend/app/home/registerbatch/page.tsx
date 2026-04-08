@@ -52,75 +52,61 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex justify-center">
-        <button 
-          className="btn w-32"
-          onClick={() => router.push("/home")}>Back
-        </button>
-
-        <div className="flex flex-col w-110 gap-5" >
-          <h1 className="text-2xl font-bold">Register Batch</h1>
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex items-center justify-center pb-40">
+        <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+          <legend className="fieldset-legend">Register Item Batch</legend>
           
-          <div className="flex gap-2">
-            <p>Item Name</p>
-            <input 
-              className="input input-bordered"
-              value={itemNameInput}
-              placeholder="Item Name" 
-              onChange={(event) => setItemNameInput(event.target.value)} 
-            />
-          </div>
-          <div className="flex gap-2">
-            <p>Item Description</p>
-            <textarea 
-              className="textarea textarea-bordered"
-              value={itemDescriptionInput}
-              placeholder="What is this item batch. Give some detail" 
-              onChange={(event) => setItemDescriptionInput(event.target.value)} 
-            />
-          </div>
-          <div className="flex gap-2">
-            <p>Item Count</p>
-            <input 
-              className="input input-bordered"
-              value={itemCountInput}
-              placeholder="Number of items"
-              onChange={(event) => setItemCountInput(event.target.value)} 
-            />
-          </div>
-          <div className="flex gap-2">
-            <p>Item Weight</p>
-            <input 
-              className="input input-bordered"
-              value={itemWeightInput}
-              placeholder="Weight per item" 
-              onChange={(event) => setItemWeightInput(event.target.value)} 
-            />           
-          </div>
-          <div className="flex gap-2">
-            <p>File Upload</p>
-            <input 
-              className="input input-bordered"
-              value={itemFileInput}
-              placeholder="Not Yet Implemented"
-              onChange={(event) => setItemFileInput(event.target.value)}  
-            />
-          </div>
-          <div className="flex gap-2">
-            <p>Additional Information</p>
-            <textarea 
-              className="textarea textarea-bordered"
-              value={itemAdditionalInput}
-              placeholder="Additional Relevant Information"
-              onChange={(event) => setItemAdditionalInput(event.target.value)} 
-            />            
-          </div>
+          <label className="label">Item Name</label>
+          <input 
+            className="input input-bordered"
+            value={itemNameInput}
+            placeholder="Item Name" 
+            onChange={(event) => setItemNameInput(event.target.value)} 
+          />
+          <label className="label">Item Description</label>
+          <textarea 
+            className="textarea textarea-bordered"
+            value={itemDescriptionInput}
+            placeholder="What is this item batch. Give some detail" 
+            onChange={(event) => setItemDescriptionInput(event.target.value)} 
+          />
+          <label className="label">Item Count</label>
+          <input 
+            className="input input-bordered"
+            value={itemCountInput}
+            placeholder="Number of items"
+            onChange={(event) => setItemCountInput(event.target.value)} 
+          />
+          <label className="label">Item Weight</label>
+          <input 
+            className="input input-bordered"
+            value={itemWeightInput}
+            placeholder="Weight per item" 
+            onChange={(event) => setItemWeightInput(event.target.value)} 
+          />           
+          <label className="label">File Upload</label>
+          <input 
+            className="input input-bordered"
+            value={itemFileInput}
+            placeholder="Not Yet Implemented"
+            onChange={(event) => setItemFileInput(event.target.value)}  
+          />
+          <label className="label">Additional Information</label>
+          <textarea 
+            className="textarea textarea-bordered"
+            value={itemAdditionalInput}
+            placeholder="Additional Relevant Information"
+            onChange={(event) => setItemAdditionalInput(event.target.value)} 
+          />            
           <button 
             className="btn"
             onClick={ submitItemBatch }>
               Submit
           </button>
-        </div>
+        </fieldset>
+      </div>
     </div>
+
   );
 }
