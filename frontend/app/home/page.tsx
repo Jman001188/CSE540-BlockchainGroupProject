@@ -1,18 +1,28 @@
 "use client";
 import { useRouter } from "next/navigation";
+import Card from "../components/global/Card";
 
 export default function HomePage() {
 const router = useRouter();
 
+const actions = [
+  { action: "Register New Items", route: "/home/registerbatch" },
+  { action: "Send", route: "/home/sendbatch" },
+  { action: "Receive", route: "/home/receivebatch" },
+  { action: "User Profile", route: "/home/userprofile" },
+  { action: "Company Profile", route: "/home/companyprofile" },
+]
+
   return (
-    <div>
-        <button onClick={() => router.push("/login")}>Logout</button><hr/><br/>
-        Home Page <br/><br/>
-        <button onClick={() => router.push("/home/registerbatch")}>Register New Items</button><br/>
-        <button onClick={() => router.push("/home/sendbatch")}>Send</button><br/>
-        <button onClick={() => router.push("/home/receivebatch")}>Receive</button><br/>
-        <button onClick={() => router.push("/home/userprofile")}>User Profile</button><br/>
-        <button onClick={() => router.push("/home/companyprofile")}>Company Profile</button><br/>
+    <div className="grid grid-cols-3 gap-6 pt-10">
+        {actions.map((currentAction) => (
+          <Card
+            key={currentAction.route}
+            action={currentAction.action}
+            route={currentAction.route}
+          />
+        ))}
     </div>
   );
 }
+
