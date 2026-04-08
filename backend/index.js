@@ -3,7 +3,6 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const db = require('./db'); 
 require('dotenv').config();
-
 const app = express();
 
 // Middleware
@@ -13,16 +12,46 @@ app.use(express.json());
 const PORT = process.env.PORT || 8080;
 
 // --- AUTH & USER REGISTRATION ---
+const jwt = require('jsonwebtoken'); 
 
-// Basic User Registration 
-app.post('/api/users/register', async (req, res) => {
+app.post('/auth/login', async (req, res) => {
     try {
-        const sql = 'INSERT INTO users (public_key, username, role) VALUES ($1, $2, $3) RETURNING *';
-        const result = await db.query(sql, [req.body.public_key, req.body.username, req.body.role]);
-        res.status(201).json(result.rows[0]);
+        // Use LEFT JOIN so users without a company can still log in
+        const sql = `
+            SELECT u.*, c.name as company_name, c.permission_level 
+            FROM users u 
+            LEFT JOIN companies c ON u.company_id = c.company_id 
+            WHERE u.email = $1
+        `;
+        
+        const result = await db.query(sql, [req.body.email]);
+        const user = result.rows[0];
+
+        // Check if user exists AND password matches the hash
+        if (user && await bcrypt.compare(req.body.password, user.password_hash)) {
+            // Generate a token (In production, use a real secret key in your .env)
+            const token = jwt.sign({ id: user.user_id }, process.env.JWT_SECRET || 'super-secret-key', { expiresIn: '2h' });
+            
+            res.json({
+                sessionToken: token,
+                user: { 
+                    userID: user.user_id, 
+                    firstName: user.first_name, 
+                    lastName: user.last_name,
+                    role: user.role
+                },
+                company: { 
+                    companyID: user.company_id, 
+                    companyName: user.company_name, 
+                    permission: user.permission_level 
+                }
+            });
+        } else {
+            res.status(401).json({ error: "Invalid email or password" });
+        }
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Database Error' });
+        res.status(500).json({ error: "Login failed" });
     }
 });
 
@@ -53,6 +82,18 @@ app.post('/auth/register', async (req, res) => {
 });
 
 // --- COMPANY & USER MANAGEMENT ---
+
+// --- COMPANY MANAGEMENT ---
+app.post('/company', async (req, res) => {
+    try {
+        const sql = "INSERT INTO companies (name, permission_level) VALUES ($1, $2) RETURNING *";
+        const result = await db.query(sql, [req.body.name, req.body.permission_level]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to create company" });
+    }
+});
 
 app.get('/company/:companyId', async (req, res) => {
     try {
@@ -106,6 +147,33 @@ app.post('/transfers/:transferId/accept', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Acceptance failed" });
+    }
+});
+
+// --- SECURITY MIDDLEWARE ---
+const authenticateToken = (req, res, next) => {
+    // Look for the token in the headers
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Format is "Bearer <token>"
+
+    if (!token) return res.status(401).json({ error: "Access Denied: No Token Provided" });
+
+    jwt.verify(token, process.env.JWT_SECRET || 'super-secret-key', (err, user) => {
+        if (err) return res.status(403).json({ error: "Invalid or Expired Token" });
+        req.user = user; // Attach the user ID to the request
+        next(); // Let them through!
+    });
+};
+
+// --- CORE SUPPLY CHAIN APIs ---
+app.post('/api/batches', authenticateToken, async (req, res) => {
+    try {
+        const sql = "INSERT INTO batches (batch_id, product_name, origin_location) VALUES ($1, $2, $3) RETURNING *";
+        const result = await db.query(sql, [req.body.batchId, req.body.productName, req.body.originLocation]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to create batch" });
     }
 });
 

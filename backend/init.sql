@@ -6,10 +6,10 @@ CREATE TABLE IF NOT EXISTS companies (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Users Table (Updated with Auth & Company relations)
+-- 2. Users Table
 CREATE TABLE IF NOT EXISTS users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    public_key TEXT, -- Optional now if using email/password
+    public_key TEXT,
     username TEXT,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Batches Table (Original - stays mostly the same)
+-- 3. Batches Table
 CREATE TABLE IF NOT EXISTS batches (
     batch_id TEXT PRIMARY KEY,
     product_name TEXT NOT NULL,
