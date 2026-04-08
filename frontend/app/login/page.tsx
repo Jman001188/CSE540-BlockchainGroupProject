@@ -4,7 +4,7 @@ import LoginForm from "../components/login/LoginForm";
 
 
 export default function LoginPage() {
-const router = useRouter();
+  const router = useRouter();
 
   return (
     <div className="min-h-screen flex flex-col">

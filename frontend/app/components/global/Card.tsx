@@ -6,7 +6,7 @@ interface CardProps {
   route: string;
 };
 
-export default function Card({ action, route}: CardProps) {
+export default function Card({ action, route }: CardProps) {
     const router = useRouter();
     
     return (
