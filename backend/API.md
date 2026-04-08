@@ -208,7 +208,6 @@ Completes the hand-off (triggers the blockchain transaction).
 ## 🗺️ API Architecture Flow
 
 This flowchart shows how data moves through the Honest Harvest system. 
-*(If you are viewing this in VS Code, open the Markdown Preview to see the interactive diagram!)*
 
 ```mermaid
 graph LR
@@ -243,11 +242,19 @@ graph LR
         L_IN["Input: {email, password}"]:::input --> POST_LOG["POST /auth/login"]:::endpoint
         POST_LOG --> DB_USER
         DB_USER --> L_OUT["Output: {sessionToken, User Profile}"]:::output
+
+        U_IN["Input: URL :userId<br>Body: {firstName, lastName}"]:::input --> PATCH_USR["PATCH /user/:userId"]:::endpoint
+        PATCH_USR --> DB_USER
+        DB_USER --> U_OUT["Output: {Updated User Profile}"]:::output
+
+        LEG_IN["Input: {public_key, username...}"]:::input --> POST_LEG["POST /api/users/register<br>(Legacy Basic)"]:::endpoint
+        POST_LEG --> DB_USER
+        DB_USER --> LEG_OUT["Output: {Basic User}"]:::output
     end
 
     subgraph Group3 [Supply Chain and Transfers]
         direction LR
-        B_IN["Auth: Bearer Token, Input: {batchId...}"]:::input --> POST_BATCH["POST /api/batches"]:::endpoint
+        B_IN["Auth: Bearer Token<br>Input: {batchId...}"]:::input --> POST_BATCH["POST /api/batches"]:::endpoint
         POST_BATCH --> DB_CHAIN
         DB_CHAIN --> B_OUT["Output: {Batch Details}"]:::output
 
@@ -258,5 +265,11 @@ graph LR
         A_IN["Input: URL param :transferId"]:::input --> POST_ACC["POST /transfers/:id/accept"]:::endpoint
         POST_ACC --> DB_CHAIN
         DB_CHAIN --> A_OUT["Output: {Accepted Status}"]:::output
+    end
+
+    subgraph Group4 [System & Health]
+        direction LR
+        H_IN["Input: None"]:::input --> GET_HLTH["GET /"]:::endpoint
+        GET_HLTH --> H_OUT["Output: 'Honest Harvest API is running!'"]:::output
     end
 ```
