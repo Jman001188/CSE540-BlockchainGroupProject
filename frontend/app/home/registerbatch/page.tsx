@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
+import { api } from "../../apiclient"
 
 
 export default function LoginPage() {
@@ -42,9 +42,11 @@ export default function LoginPage() {
       Get back the item number from the contract
     */
 
+
     // Change this to check the success of the API call.
     if ( true ) {
       clearFields();
+      
       alert("Your item has been successfully registered! The item's registration number is 1234")
     }
   };
