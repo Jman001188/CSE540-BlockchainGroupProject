@@ -267,7 +267,7 @@ graph LR
         DB_CHAIN --> A_OUT["Output: {Accepted Status}"]:::output
     end
 
-    subgraph Group4 [System & Health]
+    subgraph Group4 [System]
         direction LR
         H_IN["Input: None"]:::input --> GET_HLTH["GET /"]:::endpoint
         GET_HLTH --> H_OUT["Output: 'Honest Harvest API is running!'"]:::output
