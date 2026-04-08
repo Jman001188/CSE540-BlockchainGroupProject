@@ -34,11 +34,6 @@
         timestamp completed_at
         timestamp created_at
     }
-
-    COMPANIES ||--o{ USERS : &quot;employs&quot;
-    COMPANIES ||--o{ TRANSFERS : &quot;sends/receives&quot;
-    BATCHES ||--o{ TRANSFERS : &quot;is tracked in&quot;
-    USERS ||--o{ TRANSFERS : &quot;initiates&quot;
 </pre>
 
 ---
@@ -49,8 +44,7 @@ This document outlines the core PostgreSQL database schema for the Honest Harves
 
 ## 🗺️ Entity-Relationship Diagram
 
-This diagram maps exactly how your SQL tables are linked together via Primary Keys (PK) and Foreign Keys (FK). 
-*(If you are viewing this in VS Code, open the Markdown Preview `Ctrl + Shift + V` to see the interactive diagram!)*
+This diagram maps exactly how your SQL tables are linked together via Primary Keys (PK) and Foreign Keys (FK).
 
 ```mermaid
 erDiagram
