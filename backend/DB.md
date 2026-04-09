@@ -44,7 +44,7 @@ This document outlines the core PostgreSQL database schema for the Honest Harves
 
 ## 🗺️ Entity-Relationship Diagram
 
-This diagram maps how SQL tables are linked together via Primary Keys (PK) and Foreign Keys (FK).
+This diagram maps exactly how your SQL tables are linked together via Primary Keys (PK) and Foreign Keys (FK).
 
 ```mermaid
 erDiagram
