@@ -246,6 +246,10 @@ graph LR
         U_IN["Input: URL :userId<br>Body: {firstName, lastName}"]:::input --> PATCH_USR["PATCH /user/:userId"]:::endpoint
         PATCH_USR --> DB_USER
         DB_USER --> U_OUT["Output: {Updated User Profile}"]:::output
+
+        LEG_IN["Input: {public_key, username...}"]:::input --> POST_LEG["POST /api/users/register<br>(Legacy Basic)"]:::endpoint
+        POST_LEG --> DB_USER
+        DB_USER --> LEG_OUT["Output: {Basic User}"]:::output
     end
 
     subgraph Group3 [Supply Chain and Transfers]
