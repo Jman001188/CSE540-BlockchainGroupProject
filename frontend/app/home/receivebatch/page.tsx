@@ -22,7 +22,7 @@ const transfers = [
 
 export default function LoginPage() {
   const [ selectedItem, setSelectedItem ] = useState<{} | null> (null);
-  
+
   const router = useRouter();
   
   const handleClick = (item: any) => {

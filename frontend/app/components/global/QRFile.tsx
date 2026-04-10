@@ -15,9 +15,7 @@ export default function QRFile({ onScan }: QRUploadProps) {
 
     try {
       const result = await scanner.scanFile(file, false);
-
       console.log("QR result:", result);
-
       onScan(result);
     } catch (err: any) {
       console.error("QR decode error:", err);
@@ -30,7 +28,7 @@ export default function QRFile({ onScan }: QRUploadProps) {
 
   return (
     <div>
-      <input type="file" accept="image/*" onChange={handleFile} />
+      <input type="file" className="file-input" accept="image/*" onChange={handleFile} />
       <div id="qr-file-reader" style={{ display: "none" }} />
     </div>
   );

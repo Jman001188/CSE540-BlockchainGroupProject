@@ -5,108 +5,138 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 
+const tempItemBatchInformation = {
+  name: "Green Olives",
+  itemBatchId: 123,
+  currentOwner: "Acme inc.",
+  count: 500,
+  weight: "1kg",
+  description: "A crate of Green Olives"
+}
+const tempCompanyInformation = {
+  companyId: 1,
+  name: "Acme inc.",
+  description: "A company that produces and distributes Green Olives",
+  publicKey: "PUBLIC_KEY_STRING_HERE",
+
+}
+
 
 export default function LoginPage() {
-  const [ itemQrMode, setItemQrMode ] = useState("none");
   const [ itemQrValue, setItemQrValue ] = useState<string | null>(null);
-  const [ recipientQrMode, setRecipientQrMode ] = useState("none");
   const [ recipientQrValue, setRecipientQrValue ] = useState<string | null>(null);
+  const [ currentStepForSending, setCurrentStepForSending ] = useState<string>("scanItem");
 
   const router = useRouter();
 
   const handleItemScan = (result: string) => {
     console.log("QR Result:", result);
-
     setItemQrValue(result);
-    setItemQrMode("none");
     // Use the QR scan result
   };
 
   const handleRecipientScan = (result: string) => {
     console.log("QR Result:", result);
-
     setRecipientQrValue(result);
-    setRecipientQrMode("none");
     // Use the QR scan result
   };
 
-  const changeItemQrMode = (mode: string) => {
-    setItemQrMode(mode);
-    setRecipientQrMode("none");
-  }
-  const changeRecipientQrMode = (mode: string) => {
-    setRecipientQrMode(mode);
-    setItemQrMode("none");
-  }
   const clearItems = () => {
     setItemQrValue("");
     setRecipientQrValue("");
+
+  }
+
+  const triggerItemTransfer = () => {
+    alert("You successfully transfered an item!")
+    console.log("Transferring item batch:", itemQrValue, "to recipient:", recipientQrValue);
+    setCurrentStepForSending("scanItem");
+    clearItems();
   }
 
 
   return (
-    <div className="min-h-screen flex flex-col">
-
-        <button onClick={() => router.push("/home")}>Back</button><hr/><br/>
-
-        { itemQrMode === "none" &&
+    <div className="min-h-screen flex flex-col w-[500px] mx-auto items-center">
+        {
+          currentStepForSending === "scanItem" &&
           <>
-            <button className="btn" onClick={() => changeItemQrMode("camera")}>Scan QR</button>
-            <button className="btn" onClick={() => changeItemQrMode("file")}>Upload QR</button> 
+            <hr/> 
+            
+            { !itemQrValue &&
+              <>
+                <h2 className="text-2xl font-bold text-center">Scan the QR code on the item you want to send.</h2>
+                <QRCamera onScan={handleItemScan} />
+                <QRFile onScan={handleItemScan} />
+              </>
+            }
+            { itemQrValue &&             
+              <div className="columns" >
+                <button onClick={() => setItemQrValue(null)} className="btn">
+                  Scan Item Again
+                </button>
+                <h2 className="text-2xl font-bold text-center">Item Information</h2>
+                <p>Item Batch Blockchain ID: {tempItemBatchInformation.itemBatchId}</p>
+                <p>Item Owner: {tempItemBatchInformation.currentOwner}</p>
+                <p>Item Count: {tempItemBatchInformation.count}</p>
+                <p>Item Weight: {tempItemBatchInformation.weight}</p>
+                <p>Item Description: {tempItemBatchInformation.description}</p>
+                <hr/>
+                <button className="btn" onClick={() => setCurrentStepForSending("scanRecipient")} >
+                  Next
+                </button>
+              </div> 
+            }
+            
+           
           </>
         }
 
-        { itemQrMode === "camera" && 
+
+        { currentStepForSending === "scanRecipient" &&
           <>
-            <QRCamera onScan={handleItemScan} />
-            <button className="btn" onClick={() => changeItemQrMode("file")}>Upload QR</button> 
+            { itemQrValue &&             
+              <div className="columns" >
+                <button onClick={() => {setCurrentStepForSending("scanItem");setItemQrValue(null);setRecipientQrValue(null)}} className="btn">
+                  Scan Item Again
+                </button>
+                <h2 className="text-2xl font-bold text-center">Item Information</h2>
+                <p>Item Batch Blockchain ID: {tempItemBatchInformation.itemBatchId}</p>
+                <p>Item Owner: {tempItemBatchInformation.currentOwner}</p>
+                <p>Item Count: {tempItemBatchInformation.count}</p>
+                <p>Item Weight: {tempItemBatchInformation.weight}</p>
+                <p>Item Description: {tempItemBatchInformation.description}</p>
+                <hr/>
+                { !recipientQrValue &&
+                  <>
+                    <h2 className="text-2xl font-bold text-center">Scan the QR code on the recipient you want to send the item to.</h2>
+                    <QRCamera onScan={handleRecipientScan} />
+                    <QRFile onScan={handleRecipientScan} />
+                  </>
+                }
+                { recipientQrValue &&             
+                  <>
+                    <button onClick={() => setRecipientQrValue(null)} className="btn">
+                      Scan Recipient Again
+                    </button>
+                    <h2 className="text-2xl font-bold text-center">Recipient Information</h2>
+                    <p>Company Name: {tempCompanyInformation.name}</p>
+                    <p>Company Blockchain ID: {tempCompanyInformation.companyId}</p>
+                    <p>Description: {tempCompanyInformation.description}</p>
+                    <p>Public Key: {tempCompanyInformation.publicKey}</p>
+                    <button className="btn" disabled={!recipientQrValue || !itemQrValue} onClick={() => triggerItemTransfer()}>
+                      Transfer Batch
+                    </button> 
+                  </> 
+                }
+                         
+
+              </div> 
+            }
+
+            
+            
           </>
         }
-
-        { itemQrMode === "file" &&
-          <>
-            <QRFile onScan={handleItemScan} />
-            <button className="btn" onClick={() => changeItemQrMode("camera")}>Scan QR</button> 
-          </>
-        }
-
-        <hr/>
-
-        { itemQrValue && <p>Scanned: {itemQrValue}</p> }
-
-        <hr/>
-
-        { recipientQrMode === "none" &&
-          <>
-            <button className="btn" onClick={() => changeRecipientQrMode("camera")}>Scan QR</button>
-            <button className="btn" onClick={() => changeRecipientQrMode("file")}>Upload QR</button> 
-          </>
-        }
-
-        { recipientQrMode === "camera" && 
-          <>
-            <QRCamera onScan={handleRecipientScan} />
-            <button className="btn" onClick={() => changeRecipientQrMode("file")}>Upload QR</button> 
-          </>
-        }
-
-        { recipientQrMode === "file" &&
-          <>
-            <QRFile onScan={handleRecipientScan} />
-            <button className="btn" onClick={() => changeRecipientQrMode("camera")}>Scan QR</button> 
-          </>
-        }
-
-        <hr/>
-
-        { recipientQrValue && <p>Scanned: {recipientQrValue}</p> }
-
-        <hr/>
-
-        <button className="btn" disabled={!recipientQrValue || !itemQrValue} onClick={() => clearItems()}>Transfer Batch</button> 
-
-        This will scan the item goods QR code, which will then show the user<br/>
-        a confirmation of the goods they are sending. It will then allow to scan the receiving user's QR code.
 
     </div>
   );
