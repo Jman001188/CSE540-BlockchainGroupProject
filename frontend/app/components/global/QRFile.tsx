@@ -6,6 +6,8 @@ type QRUploadProps = {
   onScan: (result: string) => void;
 };
 
+// This component allows the user to upload an image file containing a QR code and attempts to decode it using the Html5Qrcode library. 
+// If a QR code is successfully decoded, the result is passed to the onScan callback prop.
 export default function QRFile({ onScan }: QRUploadProps) {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

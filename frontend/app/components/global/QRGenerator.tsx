@@ -7,6 +7,7 @@ type Props = {
   data: string;
 };
 
+// This component generates a QR code from the data prop and renders it as an image
 export default function QRGenerator({data}: Props) {
   const [qr, setQr] = useState("");
 

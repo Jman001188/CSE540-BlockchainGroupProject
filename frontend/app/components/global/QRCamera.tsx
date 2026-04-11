@@ -7,6 +7,8 @@ type Props = {
   onScan: (result: string) => void;
 };
 
+
+// This component uses the device camera to scan QR codes in real-time. When a QR code is detected, the decoded result is passed to the onScan callback prop.
 export default function QRCamera({ onScan }: Props) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isRunningRef = useRef(false);

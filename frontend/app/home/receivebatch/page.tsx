@@ -3,6 +3,7 @@ import QRGenerator from "@/app/components/global/QRGenerator";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+// Dummy Data
 const transfers = [
   {
     id: 1,
@@ -41,7 +42,7 @@ export default function LoginPage() {
       <button className="btn" onClick={() => router.push("/home")}>Back</button><hr/><br/>
       
       <div className="flex flex-col gap-3">
-        {transfers.map((item) => (
+        {transfers.map((item) => ( // Iterate over the list of pending transfers and render each one
           <div
             key={item.id}
             onClick={() => setSelectedItem(item.batchId)}

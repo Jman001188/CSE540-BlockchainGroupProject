@@ -3,6 +3,24 @@ const API = "http://localhost:8080";
 
 export const api = {
   
+
+    UserLogin: async (data: any) => {
+        /*
+            data: {
+                email: 
+                password:
+            }
+        */
+        const res = await fetch(`${API}/auth/login`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+
+        if (!res.ok) throw new Error("Login failed");
+        return res.json();
+    },
+
     RegisterUser: async (data: any) => {
         /*
             data: {
@@ -42,7 +60,7 @@ export const api = {
         return res.json();
     },
 
-    getCompany: async (id: number) => {
+    GetCompany: async (id: number) => {
         /*
             GET - No Data Passed
         */
