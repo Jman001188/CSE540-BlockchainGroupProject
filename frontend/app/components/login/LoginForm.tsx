@@ -15,6 +15,7 @@ export default function LoginForm() {
     const {setSessionToken, setUserData, setCompanyData } = useContext(Context);
 
     const loginButtonHandler = () => {
+        /*
         api.UserLogin({ email, password })
             .then(response => {
                 // store session token or user info from response
@@ -31,11 +32,13 @@ export default function LoginForm() {
                 console.error("Login failed:", error);
                 alert("Login failed. Please check your email and password and try again.");
                 
-                // temporary dummy login for testing without API
-                setSessionToken("dummy-token");
-                router.push("/home");
-            });
 
+            });
+        */
+
+        // temporary dummy login for testing without API
+        setSessionToken("dummy-token");
+        router.push("/home");
 
     }
 

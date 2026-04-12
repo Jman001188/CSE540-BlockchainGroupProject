@@ -48,8 +48,9 @@ export default function LoginPage() {
   // This will catch an error if the json format is incorrect or the scanned QR code does not match the expected ItemBatchData structure
   const handleItemScan = (result: unknown) => {
     try {
-      setProcessedItemData(result as ItemBatchData);
-      // This doesn't assign the data to processedItemData until the Apis are connected
+      // This doesn't assign the data Since the test QR Codes are fake
+      //setProcessedItemData(result as ItemBatchData);
+
       console.log("Item QR Result:", result);
       setHasItemQrValue(true);  
     } catch (error) {
@@ -62,8 +63,9 @@ export default function LoginPage() {
   const handleRecipientScan = (result: unknown) => {
 
     try {
-      setProcessedRecipientData(result as CompanyData);
-      // This doesn't assign the data to processedRecipientData until the Apis are connected
+      // This doesn't assign the data Since the test QR Codes are fake
+      //setProcessedRecipientData(result as CompanyData);
+
       console.log("Recipient QR Result:", result);
       setHasRecipientQrValue(true);
     } catch (error) {
@@ -79,6 +81,7 @@ export default function LoginPage() {
 
   // This is a simulated function until APIS are connected
   const triggerItemTransfer = () => {
+    // API CALL SIMULATION
     alert("You successfully transfered an item!")
     console.log("Transferring item batch:", processedItemData, "to recipient:", processedRecipientData);
     setCurrentStepForSending("scanItem");
