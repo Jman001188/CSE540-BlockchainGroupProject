@@ -6,7 +6,6 @@ import Card from "../global/Card";
 
 
 export default function HomePage() {
-  const router = useRouter();
 
   const actions = [
     { action: "Register New Items", route: "/home/registerbatch" },
