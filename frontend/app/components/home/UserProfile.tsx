@@ -1,16 +1,17 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { use, useEffect, useState } from "react";
-
-
+import {useContext, useEffect, useState } from "react";
+import { Context } from "../global/Context";
 
 export default function LoginPage() {
-    const [ firstName, setFirstName ] = useState<string>(" ");
-    const [ newFirstName, setNewFirstName ] = useState<string>(" ");
+    const { userData } = useContext(Context);
+
+    const [ firstName, setFirstName ] = useState<string>(userData?.firstName ?? "");
+    const [ newFirstName, setNewFirstName ] = useState<string>(userData?.firstName ?? "");
     const [ isEditingFirstName, setIsEditingFirstName ] = useState<boolean>(false);
 
-    const [ lastName, setLastName ] = useState<string>(" ");
-    const [ newLastName, setNewLastName ] = useState<string>(" ");
+    const [ lastName, setLastName ] = useState<string>(userData?.lastName ?? "");
+    const [ newLastName, setNewLastName ] = useState<string>(userData?.lastName ?? "");
     const [ isEditingLastName, setIsEditingLastName ] = useState<boolean>(false);
 
     const [ companyName, setCompanyName ] = useState<string>(" ");

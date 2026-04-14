@@ -1,10 +1,12 @@
 "use client";
 import QRGenerator from "@/app/components/global/QRGenerator";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { RecipientData, TransferData } from "../utils/types";
+import { Context } from "../global/Context";
 
 // Dummy Data
-const transfers = [
+const transfers: TransferData[] = [
   {
     id: 1,
     batchId: 123,
@@ -22,19 +24,52 @@ const transfers = [
 ];
 
 export default function LoginPage() {
-  const [ selectedItem, setSelectedItem ] = useState<{} | null> (null);
+
+  const { userData, companyData } = useContext(Context)
+
+  const [selectedItem, setSelectedItem] = useState<TransferData | null>(null);
+  const [pendingTransfers, setPendingTransfers] = useState<TransferData[]>([]);
+  const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
+
+  
+  useEffect(() => {
+    handleRefreshPendingList();
+    const userFullName = `${userData?.firstName} ${userData?.lastName }`
+    const tempRecipientData: RecipientData = {
+      name: userFullName,
+      email: userData?.email ?? "",
+      companyPublicKey: companyData?.publicKey ?? ""
+
+    }
+    setRecipientData(tempRecipientData)
+  }, []);
+ 
+  
+  const handleRefreshPendingList = () => {
+    setSelectedItem(null);
+    // Fetch from API to refresh the list of pending transfers here 
+    setPendingTransfers(transfers)
+  };
+
+
 
   const router = useRouter();
   
-  const handleClick = (item: any) => {
+  const handleSelectItem = (item: TransferData) => {
+    setSelectedItem(item);
     console.log("Clicked:", item);
   };
 
-  const acceptBatch = (item: number) => {
-    console.log("Clicked:", item);
+  const acceptBatch = (item: TransferData) => {
+    console.log("Accepted Item Batch ID:", item.batchId);
+    setSelectedItem(null);
+    // Call API to mark the batch as accepted here
   };
-  const rejectBatch = (item: number) => {
-    console.log("Clicked:", item);
+
+  const rejectBatch = (item: TransferData) => {
+    console.log("Rejected Item Batch ID:", item.batchId);
+    setSelectedItem(null);
+    // Call API to mark the batch as rejected here
   };
 
   return (
@@ -45,7 +80,7 @@ export default function LoginPage() {
         {transfers.map((item) => ( // Iterate over the list of pending transfers and render each one
           <div
             key={item.id}
-            onClick={() => setSelectedItem(item.batchId)}
+            onClick={() => handleSelectItem(item)}
             className="p-4 border rounded-lg shadow cursor-pointer hover:bg-gray-100 transition"
           >
             <div className="font-bold">Batch #{item.batchId}</div>
@@ -72,14 +107,14 @@ export default function LoginPage() {
         <>
           <p>***Selected Item Information***</p>
           <hr/>
-          <button className="btn" onClick={() => acceptBatch(1)}>Accept</button>
-          <button className="btn" onClick={() => rejectBatch(1)}>Reject</button>
+          <button className="btn" onClick={() => acceptBatch(selectedItem)}>Accept</button>
+          <button className="btn" onClick={() => rejectBatch(selectedItem)}>Reject</button>
         </>
         
       }
       <hr/>
 
-      <QRGenerator data="teststring" />
+      <QRGenerator data={JSON.stringify(recipientData)} />
 
         
     

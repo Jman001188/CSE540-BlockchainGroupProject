@@ -1,10 +1,27 @@
 "use client";
-import { api } from "@/app/utils/apiclient";
+import { api } from "@/app/components/utils/apiclient";
 import { useRouter } from "next/navigation";
 import { useContext, useState } from "react";
 import { Context } from "../global/Context";
+import { ProfileData, UserData } from "../utils/types";
 
 
+const testProfileData: ProfileData =  {
+    sessionToken: "dummy-token",
+    user: {
+        userId: 1,
+        email: "test@example.com",
+        firstName: "Test",
+        lastName: "User",
+        role: "user"
+    },
+    company: {
+        companyId: 1,
+        companyName: "Test Company",
+        permission: "user",
+        publicKey: "dummy-public-key"
+    }
+}
 
 export default function LoginForm() {
     const router = useRouter();
@@ -37,7 +54,9 @@ export default function LoginForm() {
         */
 
         // temporary dummy login for testing without API
-        setSessionToken("dummy-token");
+        setSessionToken(testProfileData.sessionToken ?? null!);
+        setUserData(testProfileData.user);
+        setCompanyData(testProfileData.company);
         router.push("/home");
 
     }

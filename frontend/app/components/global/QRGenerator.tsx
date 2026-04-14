@@ -18,11 +18,10 @@ export default function QRGenerator({data}: Props) {
     };
 
     generate();
-  }, []);
+  }, [data]);
 
   return (
     <div>
-      <h2>QR Code</h2>
       {qr && <img src={qr} alt="QR Code" />}
     </div>
   );
