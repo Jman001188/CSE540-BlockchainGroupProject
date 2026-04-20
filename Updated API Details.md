@@ -2,15 +2,15 @@
 
 **Base URL:** `http://localhost:8080`
 
-All endpoints accept and return JSON. If an endpoint requires authentication, you must include the JWT Session Token in the headers as: `Authorization: Bearer <your_token>`.
+
 
 ---
 
 ## 🔑 Session Token
 
-All authenticated endpoints require a session token passed explicitly in the request body.
+All authenticated endpoints require the JWT Session Token in the headers as: `Authorization: Bearer <your_token>`.
 
-### Internal Behavior
+### Behavior
 - JWT is validated on every request (signature + expiration)
 - Payload is decoded and injected into request context
 - Used for:
@@ -18,21 +18,14 @@ All authenticated endpoints require a session token passed explicitly in the req
   - Data scoping (company isolation)
 - Optional: token blacklist validation (if logout invalidation is implemented)
 
-### Structure
-```json
-{
-  "sessionToken": "<JWT Token>"
-}
-```
-
 **Internal Contents**
 ```json
 {
-  "userId": "123",
-  "companyId": "456",
-  "role": "manager",
-  "iat": 1710000000,
-  "exp": 1710003600
+  "userId": number,
+  "companyId": number,
+  "role": "user | manager",
+  "iat": number,
+  "exp": number
 }
 ```
 
@@ -48,9 +41,9 @@ Creates a registration token that allows a new user to join a company. Only mana
 * **Endpoint:** `POST /auth/registration-tokens`
 * **Auth Required:** Yes (Manager)
 
+
 #### Internal Behavior
 - Validates caller role is `manager`
-- Verifies `companyId` matches caller
 - Validates email format
 - Generates secure random token
 - Stores token in registration_tokens table with:
@@ -58,14 +51,14 @@ Creates a registration token that allows a new user to join a company. Only mana
   - role
   - companyId
   - status = `pending`
+- Invalidates "pending" registration tokens previously assigned to the target email
 - Optional: sends invitation email
 
 **Request**
+Authorization: Bearer <sessionToken>
 ```json
 {
-  "sessionToken": "<JWT Token>",
-  "userEmail": "",
-  "companyId": "",
+  "userEmail": string,
   "role": "user | manager"
 }
 ```
@@ -73,8 +66,8 @@ Creates a registration token that allows a new user to join a company. Only mana
 **Response (201)**
 ```json
 {
-  "registrationTokenId": "",
-  "registrationToken": ""
+  "registrationTokenId": number,
+  "registrationToken": string
 }
 ```
 
@@ -88,20 +81,16 @@ Invalidates a registration token so it can no longer be used.
 
 #### Internal Behavior
 - Validates manager role
-- Ensures token exists and is not already used
+- Ensures registration token exists and is not already used
 - Updates status → revoked
 
 **Request**
-```json
-{
-  "sessionToken": "<JWT Token>",
-}
-```
+Authorization: Bearer <sessionToken>
 
 **Response (200)**
 ```json
 {
-  "registrationTokenId": "",
+  "registrationTokenId": number,
   "status": "revoked"
 }
 ```
@@ -118,24 +107,22 @@ Retrieves all registration tokens for a company.
 - Returns all token data by companyId
 
 **Request**
-```json
-{
-  "sessionToken": "<JWT Token>"
-}
-```
+Authorization: Bearer <sessionToken>
 
 **Response (200)**
 ```json
 [
   {
-    "userId": "",
-    "email": "",
-    "companyId": "",
-    "companyName": "",
-    "role": "",
-    "registrationToken": "",
+    "userId": number,
+    "email": string,
+    "companyId": number,
+    "companyName": string,
+    "role": "user | manager",
+    "registrationToken": string,
     "status": "pending | used | revoked",
-	"createdby" : ""
+	"createdAt": string"
+	"createdById": number,
+	"createdByName" : string
   }
 ]
 ```
@@ -156,10 +143,10 @@ Returns information tied to a registration token for pre-filling user registrati
 **Response (200)**
 ```json
 {
-  "email": "",
-  "companyId": "",
-  "companyName": "",
-  "role": ""
+  "email": string,
+  "companyId": number,
+  "companyName": string,
+  "role": "user | manager"
 }
 ```
 
@@ -181,10 +168,10 @@ Consumes a registration token and creates a new user account.
 **Request**
 ```json
 {
-  "registrationToken": "",
-  "password": "",
-  "firstName": "",
-  "lastName": ""
+  "registrationToken": string,
+  "password": string,
+  "firstName": string,
+  "lastName": string
 }
 ```
 
@@ -213,8 +200,8 @@ Authenticates user credentials and returns a session token.
 **Request**
 ```json
 {
-  "email": "",
-  "password": ""
+  "email": string,
+  "password": string
 }
 ```
 
@@ -222,43 +209,18 @@ Authenticates user credentials and returns a session token.
 ```json
 {
   "sessionToken": "<JWT Token>",
+  "expiresIn": number
   "user": {
-    "userId": "",
-    "firstName": "",
-    "lastName": "",
-	email: "",
-    "role": ""
+    "userId": number,
+    "firstName": string,
+    "lastName": string,
+	"email": string,
+    "role": "user | manager"
   },
   "company": {
-    "companyId": "",
-    "companyName": ""
+    "companyId": number,
+    "companyName": string
   }
-}
-```
-
----
-
-### User Logout
-Ends a user session (client discards token or backend invalidates it if implemented).
-
-* **Endpoint:** `POST /auth/logout`
-* **Auth Required:** Yes
-
-#### Internal Behavior
-- Token is revoked
-
-
-**Request**
-```json
-{
-  "sessionToken": "<JWT Token>"
-}
-```
-
-**Response**
-```json
-{
-  "message": "Logged out successfully"
 }
 ```
 
@@ -277,11 +239,11 @@ Updates a user's basic profile information.
 - Returns updated user
 
 **Request**
+Authorization: Bearer <sessionToken>
 ```json
 {
-  "sessionToken": "<JWT Token>",
-  "firstName": "",
-  "lastName": ""
+  "firstName": string,
+  "lastName": string
 }
 ```
 
@@ -289,10 +251,10 @@ Updates a user's basic profile information.
 ```json
 {
   "user": {
-    "userId": "",
-    "firstName": "",
-    "lastName": "",
-    "role": ""
+    "userId": number,
+    "firstName": string,
+    "lastName": string,
+    "role": "user | manager"
   }
 }
 ```
@@ -316,30 +278,31 @@ Creates a new product batch, records ownership under the authenticated company, 
 - Stores batch with ownership tied to company
 - Computes dataHash from metadata
 - Calls smart contract: registerItem(dataHash)
+- sets the status to pending while the transaction works
 - Async worker:
   - monitors confirmation
-  - gets blockchain itemID
-  - gets transactionID
+  - Blockchain Contract assigns the batchId as the in the same index as the apps ID
   - updates status (confirmed or failed)
 
 **Request**
+Authorization: Bearer <sessionToken>
 ```json
 {
-  "sessionToken": "<JWT Token>",
-  "batchName": "",
-  "batchDescription": ""
+  "batchName": string,
+  "batchDescription": string
 }
 ```
 
 **Response (201)**
 ```json
 {
-  "batchId": "",
-  "batchName": "",
-  "batchDescription": "",
+  "batchId": number,
+  "batchName": string,
+  "batchDescription": string,
+  "createdAt": string,
   "blockchain": {
-    "transactionId": "",
-    "status": "pending | confirmed"
+    "transactionId": number,
+    "status": "pending | confirmed | failed"
   }
 }
 ```
@@ -357,28 +320,24 @@ Retrieves all batches owned by the authenticated company.
 - Includes blockchain metadata
 
 **Request**
-```json
-{
-  "sessionToken": "<JWT Token>"
-}
-```
+Authorization: Bearer <sessionToken>
 
 **Response (200)**
 ```json
 [
 	{
-	  "batchId": "",
-	  "batchName": "",
-	  "batchDescription": "",
-	  "createdAt": "",
-	  "registeringCompanyId": "",
-	  "registeringCompanyName": "",
-	  "registeringUserId": "",
-	  "registeringUserName": "",
+	  "batchId": number,
+	  "batchName": string,
+	  "batchDescription": string,
+	  "createdAt": string,
+	  "registeringCompanyId": number,
+	  "registeringCompanyName": string,
+	  "registeringUserId": number,
+	  "registeringUserName": string,
 	  "blockchain": {
-		"transactionId": "",
+		"transactionId": number,
 		"status": "pending | confirmed | failed",
-		"dataHash": ""
+		"dataHash": string
 	  }
 	}
 ]
@@ -399,16 +358,18 @@ Retrieves detailed information for a specific batch.
 **Response (200)**
 ```json
 {
-  "batchId": "",
-  "batchName": "",
-  "batchDescription": "",
-  "createdAt": "",
-  "registeringCompanyId": "",
-  "registeringUserId": "",
+  "batchId": number,
+  "batchName": string,
+  "batchDescription": string,
+  "createdAt": string,
+  "registeringCompanyId": number,
+  "registeringCompanyName": string,
+  "registeringUserId": number,
+  "registeringUserName": string,
   "blockchain": {
-    "transactionId": "",
-    "status": "pending",
-    "dataHash": ""
+	"transactionId": number,
+	"status": "pending | confirmed | failed",
+	"dataHash": string
   }
 }
 ```
@@ -431,26 +392,26 @@ the userID is used for destination filtering, but anyone in the company can acce
   - status = pending
 
 **Request**
+Authorization: Bearer <sessionToken>
 ```json
 {
-  "sessionToken": "<JWT Token>",
-  "batchId": "",
-  "toCompanyId": "",
-  "receivingUserID": ""
+  "batchId": number,
+  "toCompanyId": number,
+  "receivingUserID": number
 }
 ```
 
 **Response (201)**
 ```json
 {
-  "transferId": "",
-  "batchId": "",
-  "fromCompanyId": "",
-  "toCompanyId": "",
-  "senderUserID": "",
-  "receivingUserID": "",
-  "createdAt": "",
-  "status": "pending"
+  "transferId": number,
+  "batchId": number,
+  "fromCompanyId": number,
+  "toCompanyId": number,
+  "senderUserID": number,
+  "receivingUserID": number,
+  "createdAt": string,
+  "status": "pending approval | approved | rejected | transfer complete | transfer failed"
 }
 ```
 
@@ -469,27 +430,36 @@ the userID is used for destination filtering, but anyone in the company can acce
 - Returns transfer list
 
 **Request**
-```json
-{
-  "sessionToken": "<JWT Token>"
-}
-```
+Authorization: Bearer <sessionToken>
 
-**Response (201)**
+**Response (200)**
 ```json
 [
   {
     "transferId": "",
     "batchId": "",
-	"batchName": "",
-    "fromCompanyName": "",
-    "toCompanyName": "",
+    "fromCompanyId": "",
+    "toCompanyId": "",
     "senderUserId": "",
-	"senderUserName: "",
     "receivingUserId": "",
-	"receivingUserName": "",
-    "status": "pending | accepted | rejected | completed",
-    "createdAt": ""
+    "status": "pending approval | approved | rejected | transfer complete | transfer failed",
+    "createdAt": string
+  }
+]
+
+[
+  {
+    "transferId": number,
+    "batchId": number,
+	"batchName": string,
+    "fromCompanyName": string,
+    "toCompanyName": string,
+    "senderUserId": number,
+	"senderUserName: string,
+    "receivingUserId": number,
+	"receivingUserName": string,
+    "status": "pending approval | approved | rejected | transfer complete | transfer failed",
+    "createdAt": string
   }
 ]
 ```
@@ -503,6 +473,7 @@ Finalizes a transfer and updates ownership. This initiates a Smart Contract Call
 * **Auth Required:** Yes
 
 #### Internal Behavior
+- Validated Session Token
 - Validates transfer exists and is pending
 - Verifies receiving company authorization
 - Calls smart contract:
@@ -512,11 +483,7 @@ Finalizes a transfer and updates ownership. This initiates a Smart Contract Call
 - Async confirmation of blockchain success
 
 **Request**
-```json
-{
-  "sessionToken": "<JWT Token>"
-}
-```
+Authorization: Bearer <sessionToken>
 
 **Response (200)**
 ```json
@@ -539,11 +506,7 @@ Rejects a transfer.
 - Unlocks batch for future transfers
 
 **Request**
-```json
-{
-  "sessionToken": "<JWT Token>"
-}
-```
+Authorization: Bearer <sessionToken>
 
 **Response (200)**
 ```json
