@@ -67,5 +67,5 @@ CREATE TABLE transfers (
 
     -- Blockchain tracking for ownership transfer
     blockchain_tx_id TEXT,
-    blockchain_status TEXT CHECK (blockchain_status IN ('pending', 'confirmed', 'failed'))
+    blockchain_status TEXT CHECK (blockchain_status IN ('pending approval', 'approved', 'rejected', 'transfer complete', 'transfer failed'))
 );
