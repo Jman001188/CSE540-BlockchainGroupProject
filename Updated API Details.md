@@ -436,19 +436,6 @@ Authorization: Bearer <sessionToken>
 ```json
 [
   {
-    "transferId": "",
-    "batchId": "",
-    "fromCompanyId": "",
-    "toCompanyId": "",
-    "senderUserId": "",
-    "receivingUserId": "",
-    "status": "pending approval | approved | rejected | transfer complete | transfer failed",
-    "createdAt": string
-  }
-]
-
-[
-  {
     "transferId": number,
     "batchId": number,
 	"batchName": string,
