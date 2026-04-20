@@ -11,13 +11,14 @@ Function: registerItem
 Access: Public (Externally Callable)
 
 Inputs:
+- itemID (uint256): batchId from backend
 - dataHash (bytes32): Hash of batch metadata
 
 Returns:
 - itemID (uint256): Blockchain identifier
 
 Behavior:
-- Generates a new unique itemID
+- Uses the batchId provided by the backend to assign the key in the on-chain map
 - Assigns msg.sender as owner
 - Stores dataHash
 
