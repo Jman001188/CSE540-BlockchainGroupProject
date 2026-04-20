@@ -4,36 +4,46 @@ import { useContext, useEffect, useState } from "react";
 import { api } from "../utils/apiclient"
 import { BatchData } from "../utils/types";
 import QRGenerator from "../global/QRGenerator";
+import { Context } from "../global/Context";
 
 
 
 const testBatchListData: BatchData[] = [
   { 
     batchId: 1,
-    registeringUser: "testUser",
-    status: "registered",
-    itemName: "Jarred Pickles",
-    itemDescription: "A batch of homemade jarred pickles",
-    itemCount: "10 Jars",
-    itemWeight: "1 lb per jar",
-    itemFileHash: null,
-    itemAdditionalInformation: "No Additional Information"
+    batchName: "Test Batch 1",
+    batchDescription: "This is a test batch for demonstration purposes.",
+    createdAt: "2024-01-01T12:00:00Z",
+    registeringCompanyId: 1,
+    registeringCompanyName: "Test Company",
+    registeringUserId: 1,
+    registeringUserName: "Test User",
+    blockchain: {
+      transactionId: "0x123456789abcdef",
+      status: "registered",
+      dataHash: "0xabcdef123456789"
+    }
   },
   {
     batchId: 2,
-    registeringUser: "testUser",
-    status: "pending",
-    itemName: "Mayonaise",
-    itemDescription: "A batch of homemade mayonaise",
-    itemCount: "10 Jars",
-    itemWeight: "1 lb per jar",
-    itemFileHash: null,
-    itemAdditionalInformation: "No Additional Information"
+    batchName: "Test Batch 2",
+    batchDescription: "This is another test batch for demonstration purposes.",
+    createdAt: "2024-01-02T12:00:00Z",
+    registeringCompanyId: 1,
+    registeringCompanyName: "Test Company",
+    registeringUserId: 1,
+    registeringUserName: "Test User",
+    blockchain: {
+      transactionId: "0x987654321fedcba",
+      status: "pending",
+      dataHash: "0xfedcba987654321"
+    }
   }
 ];
 
+let tempTestbatchDataIndex = 3;
+
 export default function RegisterBatch() {
-  const router = useRouter();
   const [ batchList, setBatchList ] = useState<BatchData[]>([]);
   const [ selectedBatch, setSelectedBatch ] = useState<BatchData | null>(null); 
   const [ viewSelect, setViewSelect ] = useState<"register" | "list">("register");
@@ -45,18 +55,9 @@ export default function RegisterBatch() {
   const [ itemFileInput, setItemFileInput ] = useState("");
   const [ itemAdditionalInput, setItemAdditionalInput ] = useState("");
 
-
+  const { companyData, userData } = useContext(Context);
 
   const refreshBatchList = () => {
-    setBatchList(testBatchListData);
-  };
-
-  const handleRefreshBatchListClick = () => {
-        refreshBatchList();
-        setSelectedBatch(null);
-  }
-  
-  useEffect(() => { 
     // Fetch the list of batches from the API and set them in state
     /*
     api.get("/batches")
@@ -67,6 +68,18 @@ export default function RegisterBatch() {
         console.error("Error fetching batches:", error);
       });
     */
+   console.log(testBatchListData);
+    setBatchList(testBatchListData);
+  };
+
+
+
+  const handleRefreshBatchListClick = () => {
+    refreshBatchList();
+    setSelectedBatch(null);
+  }
+  
+  useEffect(() => { 
     refreshBatchList();
   }, []);
 
@@ -99,6 +112,24 @@ export default function RegisterBatch() {
       Get back the item number from the contract
     */
 
+    // Temp data assignment for testing the list and QR code generation without API
+    testBatchListData.push({
+      batchId: tempTestbatchDataIndex,
+      batchName: itemNameInput,
+      batchDescription: itemDescriptionInput,
+      createdAt: new Date().toISOString(),
+      registeringCompanyId: companyData?.companyId!,  
+      registeringCompanyName: companyData?.companyName!,
+      registeringUserId: userData?.userId!,
+      registeringUserName: userData?.firstName + " " + userData?.lastName,
+      blockchain: {
+        transactionId: "0x123456789abcdef",
+        status: "pending",
+        dataHash: "0xabcdef123456789"
+      }
+    });
+
+    tempTestbatchDataIndex++; 
 
     // Change this to check the success of the API call.
     if ( true ) {
@@ -121,7 +152,7 @@ export default function RegisterBatch() {
             </button>
             <button 
               className={`btn btn-sm ${viewSelect === 'list' ? 'selected-styles' : 'default-styles'}`}
-              onClick={() => {setViewSelect("list"); setSelectedBatch(null); refreshBatchList();}}
+              onClick={() => {setViewSelect("list"); handleRefreshBatchListClick();}}
             >
               View Registered Batches
             </button>
@@ -186,16 +217,16 @@ export default function RegisterBatch() {
               
               {selectedBatch &&
               <>
-                <h2 className="text-lg font-bold">Batch #{selectedBatch.batchId} QR Code</h2>
+                <h2 className="text-lg font-bold">Batch ID: {selectedBatch.batchId} QR Code</h2>
                 <QRGenerator data={JSON.stringify(selectedBatch)} />
                 <hr/>
               </>
   
               }
-              <button className="btn" onClick={ () => {setSelectedBatch(null); refreshBatchList();} }>Refresh List</button>
+              <button className="btn" onClick={handleRefreshBatchListClick}>Refresh List</button>
               {batchList
               .sort((a, b) => b.batchId - a.batchId)
-              .map((item) => ( // Iterate over the list of pending transfers and render each one
+              .map((item) => (
                 <div
                   key={item.batchId}
                   onClick={() => setSelectedBatch(item)}
@@ -204,22 +235,22 @@ export default function RegisterBatch() {
                   <div className="font-bold">Batch #{item.batchId}</div>
                   
                   <div className="text-sm text-gray-600">
-                    {item.itemName}
+                    {item.batchName} - Registered on {new Date(item.createdAt).toLocaleDateString()} by {item.registeringCompanyName}
                   </div>
                   
                   <div className="text-sm text-gray-600">
-                    Registered by {item.registeringUser}
+                    Registered by {item.registeringUserName}
                   </div>
                   <div   className={`mt-1 text-sm ${
-                    item.status === "registered"
+                    item.blockchain.status === "registered"
                       ? "text-green-600"
-                      : item.status === "pending"
+                      : item.blockchain.status === "pending"
                       ? "text-yellow-600"
-                      : item.status === "transferred"
+                      : item.blockchain.status === "transferred"
                       ? "text-blue-600"
                       : "text-gray-600"
                   }`}>
-                    Status: {item.status}
+                    Status: {item.blockchain.status}
                   </div>
                 </div>
               ))}

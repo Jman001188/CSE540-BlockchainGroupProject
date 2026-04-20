@@ -56,7 +56,7 @@ export default function LoginPage() {
             </div>
             :
             <div className="flex flex-col w-full" >
-                <label >First Name</label>
+                <label>First Name</label>
                 <p
                     className="w-full p-2 border rounded border-gray-300 hover:border-blue-500 transition-colors cursor-pointer"
                     onClick={() => setIsEditingFirstName(true)}

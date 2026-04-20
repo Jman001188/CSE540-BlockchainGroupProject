@@ -52,7 +52,7 @@ export default function LoginForm() {
 
             });
         */
-
+        
         // temporary dummy login for testing without API
         setSessionToken(testProfileData.sessionToken ?? null!);
         setUserData(testProfileData.user);
