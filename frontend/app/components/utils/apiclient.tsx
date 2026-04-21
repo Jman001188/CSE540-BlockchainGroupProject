@@ -1,128 +1,196 @@
+import { Batch, CreateBatchRequest, CreateBatchResponse, CreateRegistrationTokenRequest, CreateRegistrationTokenResponse, CreateTransferRequest, CreateTransferResponse, LoginRequest, LoginResponse, RegisterUserRequest, RegistrationToken, Transfer } from "./types";
+
 const API = "http://localhost:8080";
 
 
-export const api = {
-  
 
-    UserLogin: async (data: any) => {
-        /*
-            data: {
-                email: 
-                password:
-            }
-        */
-        const res = await fetch(`${API}/auth/login`, {
+export const RegistrationTokenAPI = {
+    generateToken: async (sessionToken: string, request: CreateRegistrationTokenRequest): Promise<CreateRegistrationTokenResponse> => {
+        const response = await fetch(`${API}/auth/registration-tokens`, {
             method: "POST",
-            headers: {"Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            headers: { 
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify(request),
         });
 
-        if (!res.ok) throw new Error("Login failed");
-        return res.json();
+        if (!response.ok) throw new Error("Failed to generate registration token");
+
+        return response.json();
     },
 
-    RegisterUser: async (data: any) => {
-        /*
-            data: {
-                public_key: 
-                username:
-                role:
-            }
-        */
-        const res = await fetch(`${API}/api/users/register`, {
+    revokeToken: async (sessionToken: string, tokenId: number): Promise<{ registrationTokenId: number, status: string }> => {
+        const response = await fetch(`${API}/auth/registration-tokens/${tokenId}/revoke`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${sessionToken}`
+            },
         });
 
-        if (!res.ok) throw new Error("Registration failed");
-        return res.json();
-    },
-
-    RegisterUserFullAuth : async (data: any) => {
-        /*
-            data: {
-                email: 
-                password:
-                companyId:
-                firstName:
-                lastName:
-                role:
-            }
-        */
-        const res = await fetch(`${API}/auth/register`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json" },
-            body: JSON.stringify(data),
-        });
-
-        if (!res.ok) throw new Error("Registration failed");
-        return res.json();
-    },
-
-    GetCompany: async (id: number) => {
-        /*
-            GET - No Data Passed
-        */
+        if (!response.ok) throw new Error("Failed to revoke registration token");
         
-        const res = await fetch(`${API}/company/${id}`);
-       
-        if (!res.ok) throw new Error("Fetch failed");
-        return res.json();
-    },
-
-    UpdateUserProfile: async (id: number, data: any) => {
-        /*
-            data: {
-                firstName: 
-                lastName:
-                userId:
-            }
-        */
-        
-        const res = await fetch(`${API}/user/${id}`, {
-            method: "PATCH",
-            headers: {"Content-Type": "application/json" },
-            body: JSON.stringify(data),
-        });
-
-        if (!res.ok) throw new Error("Fetch failed");
-        return res.json();
+        return response.json();
     },
 
 
-    InitiateTransferItem: async (data: any) => {
-        /*
-            data: {
-                batchId: 
-                fromCompany:
-                toCompany:
-                senderId:
-            }
-        */
-        const res = await fetch(`${API}/transfers/pending`, {
+    getTokenById: async (token: string): Promise<RegistrationToken> => {
+        const response = await fetch(`${API}/auth/registration-tokens/token`, {
             method: "POST",
-            headers: {"Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            headers: { 
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ registrationToken: token }),
         });
 
-        if (!res.ok) throw new Error("Fetch failed");
-        return res.json();
+        if (!response.ok) throw new Error("Failed to fetch registration token");
+
+        return response.json();
     },
 
-    AcceptTransferItem: async (id: number, data: any) => {
-        /*
-            data: {
-                No Data Needed
-            }
-        */
-        const res = await fetch(`${API}/transfers/${id}/accept`, {
-            method: "POST"
+    getTokenList: async (sessionToken: string): Promise<RegistrationToken[]> => {
+        // This uses the companyID from the session token to fetch all registration tokens for that company
+        const response = await fetch(`${API}/auth/registration-tokens/token-list`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${sessionToken}`
+            },
         });
 
-        if (!res.ok) throw new Error("Fetch failed");
-        return res.json();
+        if (!response.ok) throw new Error("Failed to fetch registration token list");
+
+        return response.json();
     },
 
+    consumeToken: async (request: RegisterUserRequest): Promise<{ message: string }> => {
+        const response = await fetch(`${API}/auth/registration-tokens/consume`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(request),
+        });
 
+        if (!response.ok) throw new Error("Failed to consume registration token");
+
+        return response.json();
+    },
+};
+
+export const AuthAPI = {
+    login: async (request: LoginRequest): Promise<LoginResponse> => {
+        const response = await fetch(`${API}/auth/login`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json" 
+            },
+            body: JSON.stringify(request),
+        });
+
+        if (!response.ok) throw new Error("Login failed");
+
+        return response.json();
+    },
+};
+
+
+export const BatchAPI = {
+    registerBatch: async (sessionToken: string, request: CreateBatchRequest): Promise<CreateBatchResponse> => {
+        const response = await fetch(`${API}/batches`, {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                Authorization: `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify(request),
+        });
+
+        if (!response.ok) throw new Error("Failed to register batch");
+
+        return response.json();
+    },
+
+    getBatchList: async (sessionToken: string): Promise<Batch[]> => {
+    
+        const response = await fetch(`${API}/batches/list`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${sessionToken}`
+            },
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch batch list");
+
+        return response.json();
+
+    },
+
+    getBatchById: async (id: number): Promise<Batch> => {
+        const response = await fetch(`${API}/batches/${id}`, {
+            method: "GET"
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch batch list");
+
+        return response.json();
+
+    },
+};
+
+
+export const TransferBatchAPI = {
+    initiateTransfer: async (sessionToken: string, request: CreateTransferRequest): Promise<CreateTransferResponse> => {
+        const response = await fetch(`${API}/transfers`, {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                Authorization: `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify(request)
+        });
+
+        if (!response.ok) throw new Error("Failed to initiate transfer");
+
+        return response.json();
+    },
+
+    getTransferList: async (sessionToken: string): Promise<Transfer[]> => {
+        const response = await fetch(`${API}/transfers/list`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${sessionToken}`
+            },
+        }); 
+
+        if (!response.ok) throw new Error("Failed to fetch transfer list");
+
+        return response.json();
+    },
+
+    acceptTransfer: async (sessionToken: string, transferId: number): Promise<{ message: string }> => {
+        const response = await fetch(`${API}/transfers/${transferId}/accept`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${sessionToken}`
+            },
+        });
+
+        if (!response.ok) throw new Error("Failed to accept transfer");
+        
+        return response.json();
+    },
+
+    rejectTransfer: async (sessionToken: string, transferId: number): Promise<{ message: string }> => {
+        const response = await fetch(`${API}/transfers/${transferId}/reject`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${sessionToken}`
+            },
+        });
+
+        if (!response.ok) throw new Error("Failed to reject transfer");
+        
+        return response.json();
+    },
 };

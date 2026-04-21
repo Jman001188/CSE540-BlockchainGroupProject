@@ -1,35 +1,19 @@
 "use client";
 import QRGenerator from "@/app/components/global/QRGenerator";
-import { useRouter } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
-import { RecipientData, TransferData } from "../utils/types";
+import { PendingTransferData, RecipientData, TransferData } from "../utils/types";
 import { Context } from "../global/Context";
-
-// Dummy Data
-const transfers: TransferData[] = [
-  {
-    id: 1,
-    batchId: 123,
-    fromCompany: "Farm A",
-    toCompany: "Warehouse B",
-    status: "pending",
-  },
-  {
-    id: 2,
-    batchId: 124,
-    fromCompany: "Farm C",
-    toCompany: "Store D",
-    status: "accepted",
-  },
-];
+import { testTransferListData } from "@/app/tempData";
 
 export default function LoginPage() {
 
   const { userData, companyData } = useContext(Context)
 
-  const [selectedItem, setSelectedItem] = useState<TransferData | null>(null);
-  const [pendingTransfers, setPendingTransfers] = useState<TransferData[]>([]);
+  const [selectedItem, setSelectedItem] = useState<PendingTransferData | null>(null);
+  const [pendingTransfers, setPendingTransfers] = useState<PendingTransferData[]>([]);
   const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
+  const [viewSelect, setViewSelect] = useState<string>("qr code");
+  const [filteredForUserTransfers, setFilteredForUserTransfers] = useState<boolean>(false);
 
   
   useEffect(() => {
@@ -38,7 +22,7 @@ export default function LoginPage() {
     const tempRecipientData: RecipientData = {
       name: userFullName,
       email: userData?.email ?? "",
-      companyPublicKey: companyData?.publicKey ?? ""
+      companyPublicKey: companyData?.walletAddress ?? ""
 
     }
     setRecipientData(tempRecipientData)
@@ -48,76 +32,98 @@ export default function LoginPage() {
   const handleRefreshPendingList = () => {
     setSelectedItem(null);
     // Fetch from API to refresh the list of pending transfers here 
-    setPendingTransfers(transfers)
+    setPendingTransfers(testTransferListData)
   };
 
-
-
-  const router = useRouter();
   
-  const handleSelectItem = (item: TransferData) => {
+  const handleSelectItem = (item: PendingTransferData) => {
     setSelectedItem(item);
     console.log("Clicked:", item);
   };
 
-  const acceptBatch = (item: TransferData) => {
+  const acceptBatch = (item: PendingTransferData) => {
     console.log("Accepted Item Batch ID:", item.batchId);
     setSelectedItem(null);
     // Call API to mark the batch as accepted here
   };
 
-  const rejectBatch = (item: TransferData) => {
+  const rejectBatch = (item: PendingTransferData) => {
     console.log("Rejected Item Batch ID:", item.batchId);
     setSelectedItem(null);
     // Call API to mark the batch as rejected here
   };
 
   return (
-    <>
-      <button className="btn" onClick={() => router.push("/home")}>Back</button><hr/><br/>
-      
-      <div className="flex flex-col gap-3">
-        {transfers.map((item) => ( // Iterate over the list of pending transfers and render each one
-          <div
-            key={item.id}
-            onClick={() => handleSelectItem(item)}
-            className="p-4 border rounded-lg shadow cursor-pointer hover:bg-gray-100 transition"
-          >
-            <div className="font-bold">Batch #{item.batchId}</div>
-
-            <div className="text-sm text-gray-600">
-              {item.fromCompany} → {item.toCompany}
-            </div>
-
-            <div
-              className={`mt-1 text-sm ${
-                item.status === "accepted"
-                  ? "text-green-600"
-                  : "text-yellow-600"
-              }`}
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex justify-center pb-40">
+        <div className="flex flex-col gap-4 p-4">
+          <div className="flex flex-row gap-2">
+            <button 
+              className={`btn btn-sm ${viewSelect === "qr code" ? 'selected-styles' : 'default-styles'}`}
+              onClick={() => {setViewSelect("qr code");}}
             >
-              {item.status}
-            </div>
+              Show QR Code for Receiving Items
+            </button>
+            <button 
+              className={`btn btn-sm ${viewSelect === "incoming transfers" ? 'selected-styles' : 'default-styles'}`}
+              onClick={() => setViewSelect("incoming transfers")}
+            >
+              View Incoming Transfers
+            </button>
           </div>
-        ))}
+
+          {viewSelect === "qr code" ?
+            <QRGenerator data={JSON.stringify(recipientData)} />
+          :
+            <>
+              <h2 className="text-lg font-bold">Pending Incoming Transfers</h2>
+              <input type="checkbox" className="checkbox" onChange={() => setFilteredForUserTransfers(!filteredForUserTransfers)} /> Refresh List
+              <div className="flex flex-col gap-3">
+                {testTransferListData.map((item) => 
+                  filteredForUserTransfers && item.receivingUserId !== userData?.userId ? null :
+                  (
+                    <div
+                      key={item.transferId}
+                      onClick={() => handleSelectItem(item)}
+                      className="p-4 border rounded-lg shadow cursor-pointer hover:bg-gray-100 transition"
+                    >
+                      <div className="font-bold">Batch #{item.batchId}</div>
+
+                      <div className="text-sm text-gray-600">
+                        {item.fromCompanyName} → {item.toCompanyName}
+                      </div>
+
+                      <div
+                        className={`mt-1 text-sm ${
+                          item.status === "accepted"
+                            ? "text-green-600"
+                            : "text-yellow-600"
+                        }`}
+                      >
+                        {item.status}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+
+              {
+                selectedItem &&
+                <>
+                  <p>***Selected Item Information***</p>
+                  <hr/>
+                  <button className="btn" onClick={() => acceptBatch(selectedItem)}>Accept</button>
+                  <button className="btn" onClick={() => rejectBatch(selectedItem)}>Reject</button>
+                </>
+                
+              }
+              <hr/>
+            </>
+          }
+
+            
+        </div>
       </div>
-
-      {
-        selectedItem &&
-        <>
-          <p>***Selected Item Information***</p>
-          <hr/>
-          <button className="btn" onClick={() => acceptBatch(selectedItem)}>Accept</button>
-          <button className="btn" onClick={() => rejectBatch(selectedItem)}>Reject</button>
-        </>
-        
-      }
-      <hr/>
-
-      <QRGenerator data={JSON.stringify(recipientData)} />
-
-        
-    
-    </>
+    </div>
   );
 }

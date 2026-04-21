@@ -4,7 +4,7 @@ import {useContext, useEffect, useState } from "react";
 import { Context } from "../global/Context";
 
 export default function LoginPage() {
-    const { userData } = useContext(Context);
+    const { userData, companyData } = useContext(Context);
 
     const [ firstName, setFirstName ] = useState<string>(userData?.firstName ?? "");
     const [ newFirstName, setNewFirstName ] = useState<string>(userData?.firstName ?? "");
@@ -14,29 +14,20 @@ export default function LoginPage() {
     const [ newLastName, setNewLastName ] = useState<string>(userData?.lastName ?? "");
     const [ isEditingLastName, setIsEditingLastName ] = useState<boolean>(false);
 
-    const [ companyName, setCompanyName ] = useState<string>(" ");
+    const [ companyName, setCompanyName ] = useState<string>(companyData?.companyName ?? "");
+    const [ companyWallet, setCompanyWallet ] = useState<string>(companyData?.walletAddress ?? "");
 
-    /*  
-    // This is a work in progress. Lots will change here
-    useEffect(() => {
-        // Fetch User Details from Backend
-        fetch("/api/user/profile")
-        .then(res => res.json())
-        .then(data => {
-            localStorage.setItem("userProfile", JSON.stringify(data));
-        })
-        .catch(err => console.error("Failed to fetch user profile:", err));
+    const changeProfileInformation = () => {
+        // API call to update profile information in backend
+        /* 
 
+        */
 
-        const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-
-        setFirstName(userProfile.firstName || "");
-        setNewFirstName(userProfile.firstName || "");
-        setLastName(userProfile.lastName || "");
-        setNewLastName(userProfile.lastName || "");
-        setCompanyName(userProfile.companyName || "");  
-    }, []);
-    */
+        setFirstName(newFirstName);
+        setIsEditingFirstName(false);
+        setLastName(newLastName);
+        setIsEditingLastName(false);
+    }
 
     // I want the user to be able to click on their first or last name to edit it inline and then save the changes
     // It's currently broken right now
@@ -94,10 +85,7 @@ export default function LoginPage() {
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
                 disabled={!isEditingFirstName && !isEditingLastName}
                 onClick={() => {
-                setFirstName(newFirstName);
-                setIsEditingFirstName(false);
-                setLastName(newLastName);
-                setIsEditingLastName(false);
+                    changeProfileInformation();
                 }}
             >
                 Save Changes
@@ -111,9 +99,8 @@ export default function LoginPage() {
             </div>
 
             <div className="flex flex-col w-full" > 
-
-            <label>Company Name: {companyName}</label>
-
+                <label>Company Name: {companyName}</label>
+                <label>Company Wallet: {companyWallet}</label>
 
             </div>
             

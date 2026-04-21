@@ -1,6 +1,9 @@
-/**
- * Types based on DesignArchitectureidea.md... 
- */
+// UNUSED FILE.
+// UNUSED FILE.
+// UNUSED FILE.
+// UNUSED FILE.
+// UNUSED FILE.
+
 export interface LoginResponse {
   sessionToken: string;
   user: {

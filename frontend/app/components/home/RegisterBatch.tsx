@@ -1,74 +1,33 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
-import { api } from "../utils/apiclient"
 import { BatchData } from "../utils/types";
 import QRGenerator from "../global/QRGenerator";
 import { Context } from "../global/Context";
-
-
-
-const testBatchListData: BatchData[] = [
-  { 
-    batchId: 1,
-    batchName: "Test Batch 1",
-    batchDescription: "This is a test batch for demonstration purposes.",
-    createdAt: "2024-01-01T12:00:00Z",
-    registeringCompanyId: 1,
-    registeringCompanyName: "Test Company",
-    registeringUserId: 1,
-    registeringUserName: "Test User",
-    blockchain: {
-      transactionId: "0x123456789abcdef",
-      status: "registered",
-      dataHash: "0xabcdef123456789"
-    }
-  },
-  {
-    batchId: 2,
-    batchName: "Test Batch 2",
-    batchDescription: "This is another test batch for demonstration purposes.",
-    createdAt: "2024-01-02T12:00:00Z",
-    registeringCompanyId: 1,
-    registeringCompanyName: "Test Company",
-    registeringUserId: 1,
-    registeringUserName: "Test User",
-    blockchain: {
-      transactionId: "0x987654321fedcba",
-      status: "pending",
-      dataHash: "0xfedcba987654321"
-    }
-  }
-];
-
-let tempTestbatchDataIndex = 3;
+import { tempAddNewBatch, tempIncreaseBatchIndex, tempTestbatchDataIndex, testBatchListData } from "@/app/tempData";
 
 export default function RegisterBatch() {
   const [ batchList, setBatchList ] = useState<BatchData[]>([]);
   const [ selectedBatch, setSelectedBatch ] = useState<BatchData | null>(null); 
   const [ viewSelect, setViewSelect ] = useState<"register" | "list">("register");
-
   const [ itemNameInput, setItemNameInput ] = useState("");
   const [ itemDescriptionInput, setItemDescriptionInput ] = useState("");
-  const [ itemCountInput, setItemCountInput ] = useState("");
-  const [ itemWeightInput, setItemWeightInput ] = useState("");
-  const [ itemFileInput, setItemFileInput ] = useState("");
-  const [ itemAdditionalInput, setItemAdditionalInput ] = useState("");
+  const { companyData, userData, sessionToken } = useContext(Context);
 
-  const { companyData, userData } = useContext(Context);
 
   const refreshBatchList = () => {
-    // Fetch the list of batches from the API and set them in state
+    // Uncomment once the APIs are connected to the backend.
     /*
-    api.get("/batches")
+    BatchAPI.getBatchList(sessionToken)
       .then((response) => {
-        setBatches(response.data);
+        setBatchList(response);
       })
       .catch((error) => {
-        console.error("Error fetching batches:", error);
+        console.error("Error fetching batch list:", error);
       });
     */
-   console.log(testBatchListData);
+
+    // Temp data assignment for testing the list and QR code generation without API
+    console.log(testBatchListData);
     setBatchList(testBatchListData);
   };
 
@@ -87,56 +46,54 @@ export default function RegisterBatch() {
   const clearFields = () => {
     setItemNameInput("");
     setItemDescriptionInput("");
-    setItemCountInput("");
-    setItemWeightInput("");
-    setItemFileInput("");
-    setItemAdditionalInput("");
   }
 
   const submitItemBatch = () => {
-    // We need to add the end point interaction here
-    
+
+    // Uncomment once the APIs are connected to the backend.
     /* 
-      endpoint interaction 
-      Pass:
-        itemNameInput
-        itemDescriptionInput
-        itemCountInput
-        itemWeightInput
-        itemFilemInput
-        itemAdditionalInput
-      
-      Into the API.
-
-      Get back a success or failure.
-      Get back the item number from the contract
-    */
-
-    // Temp data assignment for testing the list and QR code generation without API
-    testBatchListData.push({
-      batchId: tempTestbatchDataIndex,
+    const requestData: CreateBatchRequest = {
       batchName: itemNameInput,
       batchDescription: itemDescriptionInput,
-      createdAt: new Date().toISOString(),
-      registeringCompanyId: companyData?.companyId!,  
-      registeringCompanyName: companyData?.companyName!,
-      registeringUserId: userData?.userId!,
-      registeringUserName: userData?.firstName + " " + userData?.lastName,
-      blockchain: {
-        transactionId: "0x123456789abcdef",
-        status: "pending",
-        dataHash: "0xabcdef123456789"
+    };  
+
+    BatchAPI.registerBatch(sessionToken, requestData)
+      .then((response) => {
+        alert("Batch registered successfully! Batch ID: " + response.batchId);
+        clearFields();
+      })
+      .catch((error) => {
+        console.error("Error registering batch:", error);
+        alert("Failed to register batch.");
+      });
+
+    */
+
+    // Temp Code to add the new batch to the list without API connection. Remove once APIs are working.
+    tempAddNewBatch(
+      {
+        batchId: tempTestbatchDataIndex,
+        batchName: itemNameInput,
+        batchDescription: itemDescriptionInput,
+        createdAt: new Date().toISOString(),
+        registeringCompanyId: companyData?.companyId!,  
+        registeringCompanyName: companyData?.companyName!,
+        registeringUserId: userData?.userId!,
+        registeringUserName: userData?.firstName + " " + userData?.lastName,
+        blockchain: {
+          transactionId: "0x123456789abcdef",
+          status: "pending",
+          dataHash: "0xabcdef123456789"
+        }
       }
-    });
+    );
+    tempIncreaseBatchIndex();
 
-    tempTestbatchDataIndex++; 
-
-    // Change this to check the success of the API call.
-    if ( true ) {
-      clearFields();
-      
-      alert("Your item has been successfully registered! The item's registration number is 1234")
-    }
+    clearFields();
+    alert("Your item has been successfully registered! The item's registration number is 1234")
+    
+    // End Temp Code
+    
   };
 
   return (
@@ -177,35 +134,7 @@ export default function RegisterBatch() {
                 value={itemDescriptionInput}
                 placeholder="What is this item batch. Give some detail" 
                 onChange={(event) => setItemDescriptionInput(event.target.value)} 
-              />
-              <label className="label">Item Count</label>
-              <input 
-                className="input input-bordered"
-                value={itemCountInput}
-                placeholder="Number of items"
-                onChange={(event) => setItemCountInput(event.target.value)} 
-              />
-              <label className="label">Item Weight</label>
-              <input 
-                className="input input-bordered"
-                value={itemWeightInput}
-                placeholder="Weight per item" 
-                onChange={(event) => setItemWeightInput(event.target.value)} 
-              />           
-              <label className="label">File Upload</label>
-              <input 
-                className="input input-bordered"
-                value={itemFileInput}
-                placeholder="Not Yet Implemented"
-                onChange={(event) => setItemFileInput(event.target.value)}  
-              />
-              <label className="label">Additional Information</label>
-              <textarea 
-                className="textarea textarea-bordered"
-                value={itemAdditionalInput}
-                placeholder="Additional Relevant Information"
-                onChange={(event) => setItemAdditionalInput(event.target.value)} 
-              />            
+              />        
               <button 
                 className="btn"
                 onClick={ submitItemBatch }>
@@ -224,7 +153,7 @@ export default function RegisterBatch() {
   
               }
               <button className="btn" onClick={handleRefreshBatchListClick}>Refresh List</button>
-              {batchList
+              {[...batchList]
               .sort((a, b) => b.batchId - a.batchId)
               .map((item) => (
                 <div
@@ -259,6 +188,5 @@ export default function RegisterBatch() {
         </div>
       </div>
     </div>
-
   );
 }
