@@ -2,184 +2,159 @@
 pragma solidity ^0.8.20;
 
 /*
-    SupplyChainContract
+    Honest Harvest - SupplyChainContract
 
     Purpose:
-    This contract tracks item batches in a supply chain.
+    Tracks batches on-chain using only essential verification data.
 
-    What is stored on-chain:
+    Stored on-chain:
     - unique item ID
-    - current owner address
-    - hash of item metadata
-    - hash of any associated file
-    - whether the item exists
+    - current owner address (company wallet)
+    - hash of off-chain batch metadata
+    - existence flag
 
-    What is handled off-chain:
-    - human-readable item name
-    - source item descriptions
-    - documents / images / certificates
-    - database records and UI display details
-
-    Events are emitted so an off-chain system can listen and store/display
-    descriptive information without forcing large strings or files on-chain.
+    Stored off-chain:
+    - batch name
+    - batch description
+    - registering company/user IDs
+    - transfer workflow records
+    - transaction status
+    - any files, documents, images, certificates
 */
 
 contract SupplyChainContract {
-
-    // Represents a tracked batch/item in the supply chain
     struct Item {
-        uint256 id;
+        uint256 itemID;
         address owner;
         bytes32 dataHash;
-        bytes32 fileHash;
         bool exists;
     }
 
-    // Next ID to assign to a newly registered item
     uint256 public currentID = 1;
 
-    // Mapping from item ID to item data
     mapping(uint256 => Item) private items;
 
-    /*
-        Event emitted when a new item is registered.
-
-        itemID: newly created item ID
-        owner: address of the creator / initial owner
-        name: off-chain human-readable batch/item name
-        sourceItemIDs: IDs of source items used to create this batch
-        dataHash: hash of metadata stored off-chain
-        fileHash: hash of attached file stored off-chain
-    */
     event ItemRegistered(
         uint256 indexed itemID,
         address indexed owner,
-        string name,
-        uint256[] sourceItemIDs,
-        bytes32 dataHash,
-        bytes32 fileHash
+        bytes32 dataHash
     );
 
-    /*
-        Event emitted when ownership of an item is transferred.
-    */
-    event ItemTransferred(
+    event OwnershipTransferred(
         uint256 indexed itemID,
         address indexed from,
         address indexed to
     );
 
-    // Ensures that the item exists before continuing
     modifier itemExists(uint256 itemID) {
         require(items[itemID].exists, "Item does not exist");
         _;
     }
 
-    // Ensures that only the current owner can perform certain actions
     modifier onlyOwner(uint256 itemID) {
-        require(items[itemID].owner == msg.sender, "Caller is not the item owner");
+        require(items[itemID].owner == msg.sender, "Caller is not the current owner");
         _;
     }
 
     /*
-        Register a new item in the supply chain.
+        Register a new batch/item.
 
-        Parameters:
-        - name: human-readable name for the item/batch
-        - sourceItemIDs: IDs of input/source items; empty for raw/origin material
-        - dataHash: hash of metadata stored off-chain
-        - fileHash: hash of related file stored off-chain
+        Intended workflow:
+        - backend validates authenticated user/company
+        - backend computes dataHash from off-chain metadata
+        - transaction is signed by the company wallet (or via HSM on its behalf)
+        - msg.sender becomes the recorded on-chain owner
+
+        Inputs:
+        - dataHash: hash of off-chain batch metadata
 
         Returns:
-        - newly assigned item ID
+        - newly assigned blockchain itemID
     */
-    function registerItem(
-        string calldata name,
-        uint256[] calldata sourceItemIDs,
-        bytes32 dataHash,
-        bytes32 fileHash
-    ) external returns (uint256) {
+    function registerItem(bytes32 dataHash) external returns (uint256) {
+        require(dataHash != bytes32(0), "dataHash cannot be empty");
+
         uint256 newID = currentID;
 
         items[newID] = Item({
-            id: newID,
+            itemID: newID,
             owner: msg.sender,
             dataHash: dataHash,
-            fileHash: fileHash,
             exists: true
         });
 
-        emit ItemRegistered(
-            newID,
-            msg.sender,
-            name,
-            sourceItemIDs,
-            dataHash,
-            fileHash
-        );
+        emit ItemRegistered(newID, msg.sender, dataHash);
 
         currentID++;
         return newID;
     }
 
     /*
-        Transfer an item to another address.
+        Transfer ownership of an existing item to another company wallet.
 
-        Requirements:
-        - item must exist
-        - caller must be current owner
-        - recipient cannot be the zero address
+        Intended workflow:
+        - backend verifies transfer record is pending and receiver is authorized
+        - backend initiates blockchain transaction
+        - current owner wallet signs the transaction (or HSM signs on its behalf)
+
+        Inputs:
+        - itemID: blockchain item identifier
+        - newOwner: destination company wallet address
     */
-    function transferItem(
+    function transferOwnership(
         uint256 itemID,
         address newOwner
     ) external itemExists(itemID) onlyOwner(itemID) {
-        require(newOwner != address(0), "Invalid recipient address");
+        require(newOwner != address(0), "Invalid new owner address");
         require(newOwner != items[itemID].owner, "New owner must be different");
 
         address previousOwner = items[itemID].owner;
         items[itemID].owner = newOwner;
 
-        emit ItemTransferred(itemID, previousOwner, newOwner);
+        emit OwnershipTransferred(itemID, previousOwner, newOwner);
     }
 
     /*
-        Read the on-chain data for a specific item.
-
-        This is useful because the mapping is private, so we expose
-        a clean getter function for item details.
+        Retrieve the on-chain record for a batch.
     */
-    function getItem(uint256 itemID)
+    function getItem(
+        uint256 itemID
+    )
         external
         view
         itemExists(itemID)
         returns (
-            uint256 id,
+            uint256 returnedItemID,
             address owner,
-            bytes32 dataHash,
-            bytes32 fileHash,
-            bool exists
+            bytes32 dataHash
         )
     {
         Item memory item = items[itemID];
-        return (
-            item.id,
-            item.owner,
-            item.dataHash,
-            item.fileHash,
-            item.exists
-        );
+        return (item.itemID, item.owner, item.dataHash);
     }
 
     /*
-        Convenience function to check the current owner of an item.
+        Convenience getter for current owner.
     */
-    function getItemOwner(uint256 itemID)
-        external
-        view
-        itemExists(itemID)
-        returns (address)
-    {
+    function getItemOwner(
+        uint256 itemID
+    ) external view itemExists(itemID) returns (address) {
         return items[itemID].owner;
+    }
+
+    /*
+        Convenience getter for current data hash.
+    */
+    function getItemDataHash(
+        uint256 itemID
+    ) external view itemExists(itemID) returns (bytes32) {
+        return items[itemID].dataHash;
+    }
+
+    /*
+        Convenience checker for existence.
+    */
+    function itemExistsOnChain(uint256 itemID) external view returns (bool) {
+        return items[itemID].exists;
     }
 }
