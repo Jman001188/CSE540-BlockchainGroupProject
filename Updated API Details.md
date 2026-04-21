@@ -113,12 +113,13 @@ Authorization: Bearer <sessionToken>
 ```json
 [
   {
+	tokenId: number,
+	"registrationToken": string,
     "userId": number,
     "email": string,
     "companyId": number,
     "companyName": string,
     "role": "user | manager",
-    "registrationToken": string,
     "status": "pending | used | revoked",
 	"createdAt": string"
 	"createdById": number,
@@ -150,10 +151,17 @@ Returns information tied to a registration token for pre-filling user registrati
 **Response (200)**
 ```json
 {
-  "email": string,
-  "companyId": number,
-  "companyName": string,
-  "role": "user | manager"
+tokenId: number,
+"registrationToken": string,
+"userId": number,
+"email": string,
+"companyId": number,
+"companyName": string,
+"role": "user | manager",
+"status": "pending | used | revoked",
+"createdAt": string"
+"createdById": number,
+"createdByName" : string
 }
 ```
 
