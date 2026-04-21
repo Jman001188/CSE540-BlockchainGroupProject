@@ -100,7 +100,7 @@ Authorization: Bearer <sessionToken>
 ### Get Registration Token List
 Retrieves all registration tokens for a company.
 
-* **Endpoint:** `GET /auth/registration-tokens`
+* **Endpoint:** `GET /auth/registration-tokens/token-list`
 * **Auth Required:** Yes (Manager)
 
 #### Internal Behavior
@@ -132,13 +132,20 @@ Authorization: Bearer <sessionToken>
 ### Get Registration Token
 Returns information tied to a registration token for pre-filling user registration.
 
-* **Endpoint:** `GET /auth/registration-tokens/:token`
+* **Endpoint:** `POST /auth/registration-tokens/token`
 * **Auth Required:** No
 
 #### Internal Behavior
 - Validates token exists and is pending
 - Ensures token not expired
 - Returns data to user 
+
+**Request**
+```json
+{
+	"registrationToken": string
+}
+```
 
 **Response (200)**
 ```json
@@ -219,7 +226,8 @@ Authenticates user credentials and returns a session token.
   },
   "company": {
     "companyId": number,
-    "companyName": string
+    "companyName": string,
+	"walletAddress": string
   }
 }
 ```
@@ -261,7 +269,7 @@ Authorization: Bearer <sessionToken>
 
 ---
 
-## 📦 3. Core Supply Chain & Transfers
+## 3. Core Supply Chain & Transfers
 
 ---
 
