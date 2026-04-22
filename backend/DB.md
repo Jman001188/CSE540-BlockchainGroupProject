@@ -63,13 +63,13 @@ The database is fully containerized. To initialize the schema from scratch, the 
 docker-compose down -v
 docker-compose up -d --build
 
+```
+
 ---
 
 # 🗄️ Honest Harvest Database Architecture
 
 This document outlines the core PostgreSQL database schema for the Honest Harvest supply chain system.
-
-```
 
 ## 🗺️ Entity-Relationship Diagram
 
