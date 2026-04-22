@@ -16,7 +16,7 @@ app.use(express.json());
 // Middleware to authenticate and parse the JWT
 const authenticateToken = (req, res, next) => {
     // API docs mention token in body OR headers. We will check body first, then fallback to header.
-    let token = req.body.sessionToken;
+    let token = req.body?.sessionToken;
     if (!token) {
         const authHeader = req.headers['authorization'];
         token = authHeader && authHeader.split(' ')[1];
