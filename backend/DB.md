@@ -1,40 +1,67 @@
 <pre>
-    COMPANIES {
-        uuid company_id PK
-        text name
-        text permission_level
-        timestamp created_at
-    }
-    USERS {
-        uuid user_id PK
-        text public_key
-        text username
-        text email UK
-        text password_hash
-        text first_name
-        text last_name
-        text role
-        uuid company_id FK &quot;References companies&quot;
-        timestamp created_at
-    }
-    BATCHES {
-        text batch_id PK
-        text product_name
-        text origin_location
-        text ipfs_hash
-        timestamp created_at
-    }
-    TRANSFERS {
-        uuid id PK
-        text batch_id FK &quot;References batches&quot;
-        uuid from_company FK &quot;References companies&quot;
-        uuid to_company FK &quot;References companies&quot;
-        uuid sender_id FK &quot;References users&quot;
-        text status
-        timestamp completed_at
-        timestamp created_at
-    }
+COMPANIES {
+uuid company_id PK
+text name
+timestamp created_at
+}
+USERS {
+uuid user_id PK
+text email UK
+text password_hash
+text first_name
+text last_name
+text role
+uuid company_id FK &quot;References companies&quot;
+timestamp created_at
+}
+REGISTRATION_TOKENS {
+uuid registration_token_id PK
+text token UK
+text email
+uuid company_id FK &quot;References companies&quot;
+text role
+text status
+uuid created_by FK &quot;References users&quot;
+timestamp created_at
+timestamp used_at
+}
+BATCHES {
+uuid batch_id PK
+bigint blockchain_batch_id UK
+text batch_name
+text batch_description
+uuid company_id FK &quot;References companies&quot;
+uuid created_by FK &quot;References users&quot;
+timestamp created_at
+text blockchain_tx_id
+text blockchain_status
+text data_hash
+}
+TRANSFERS {
+uuid transfer_id PK
+uuid batch_id FK &quot;References batches&quot;
+uuid from_company_id FK &quot;References companies&quot;
+uuid to_company_id FK &quot;References companies&quot;
+uuid sender_user_id FK &quot;References users&quot;
+uuid receiving_user_id FK &quot;References users&quot;
+text status
+timestamp created_at
+timestamp completed_at
+text blockchain_tx_id
+text blockchain_status
+}
 </pre>
+
+---
+
+## 🧭 Initialization
+
+The database is fully containerized. To initialize the schema from scratch, the `init.sql` file is automatically executed when building the Docker environment.
+
+```bash
+# Wipes old volumes and builds a fresh database with the defined schema
+docker-compose down -v
+docker-compose up -d --build
 
 ---
 
@@ -51,13 +78,10 @@ erDiagram
     COMPANIES {
         uuid company_id PK
         text name
-        text permission_level
         timestamp created_at
     }
     USERS {
         uuid user_id PK
-        text public_key
-        text username
         text email UK
         text password_hash
         text first_name
@@ -66,26 +90,49 @@ erDiagram
         uuid company_id FK "References companies"
         timestamp created_at
     }
-    BATCHES {
-        text batch_id PK
-        text product_name
-        text origin_location
-        text ipfs_hash
+    REGISTRATION_TOKENS {
+        uuid registration_token_id PK
+        text token UK
+        text email
+        uuid company_id FK "References companies"
+        text role
+        text status
+        uuid created_by FK "References users"
         timestamp created_at
+        timestamp used_at
+    }
+    BATCHES {
+        uuid batch_id PK
+        bigint blockchain_batch_id UK
+        text batch_name
+        text batch_description
+        uuid company_id FK "References companies"
+        uuid created_by FK "References users"
+        timestamp created_at
+        text blockchain_tx_id
+        text blockchain_status
+        text data_hash
     }
     TRANSFERS {
-        uuid id PK
-        text batch_id FK "References batches"
-        uuid from_company FK "References companies"
-        uuid to_company FK "References companies"
-        uuid sender_id FK "References users"
+        uuid transfer_id PK
+        uuid batch_id FK "References batches"
+        uuid from_company_id FK "References companies"
+        uuid to_company_id FK "References companies"
+        uuid sender_user_id FK "References users"
+        uuid receiving_user_id FK "References users"
         text status
-        timestamp completed_at
         timestamp created_at
+        timestamp completed_at
+        text blockchain_tx_id
+        text blockchain_status
     }
 
     COMPANIES ||--o{ USERS : "employs"
+    COMPANIES ||--o{ REGISTRATION_TOKENS : "owns"
+    COMPANIES ||--o{ BATCHES : "currently owns"
     COMPANIES ||--o{ TRANSFERS : "sends/receives"
+    USERS ||--o{ REGISTRATION_TOKENS : "generates"
+    USERS ||--o{ BATCHES : "registers"
+    USERS ||--o{ TRANSFERS : "initiates/receives"
     BATCHES ||--o{ TRANSFERS : "is tracked in"
-    USERS ||--o{ TRANSFERS : "initiates"
 ```
