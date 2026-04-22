@@ -16,7 +16,6 @@ All authenticated endpoints require the JWT Session Token in the headers as: `Au
 - Used for:
   - Authorization (role checks)
   - Data scoping (company isolation)
-- Optional: token blacklist validation (if logout invalidation is implemented)
 
 **Internal Contents**
 ```json
@@ -454,13 +453,13 @@ Authorization: Bearer <sessionToken>
   {
     "transferId": number,
     "batchId": number,
-	"batchName": string,
+	  "batchName": string,
     "fromCompanyName": string,
     "toCompanyName": string,
     "senderUserId": number,
-	"senderUserName: string,
+	  "senderUserName: string,
     "receivingUserId": number,
-	"receivingUserName": string,
+	  "receivingUserName": string,
     "status": "pending approval | approved | rejected | transfer complete | transfer failed",
     "createdAt": string
   }

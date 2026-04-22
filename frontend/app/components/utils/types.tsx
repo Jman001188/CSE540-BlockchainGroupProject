@@ -93,7 +93,7 @@ export interface PendingTransferData {
     senderUserName: string;
     receivingUserId: number;
     receivingUserName: string;
-    status: "pending" | "accepted" | "rejected" | "completed";
+    status: "pending approval" | "approved" | "rejected" | "transfer complete" | "transfer failed";
     createdAt: string;
 }
 

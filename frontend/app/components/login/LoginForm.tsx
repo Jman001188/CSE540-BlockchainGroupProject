@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Context } from "../global/Context";
 import { ProfileData, UserData } from "../utils/types";
 import { testProfileData } from "@/app/tempData";
@@ -8,12 +8,13 @@ import { testProfileData } from "@/app/tempData";
 
 
 export default function LoginForm() {
-    const router = useRouter();
+    
     
     const [ email, setEmail ] = useState<string>("");
     const [ password, setPassword ] = useState<string>("");
-
-    const {setSessionToken, setUserData, setCompanyData } = useContext(Context);
+    
+    const router = useRouter();
+    const {sessionToken, setSessionToken, setUserData, setCompanyData } = useContext(Context);
 
     const loginButtonHandler = () => {
         /*
@@ -32,8 +33,6 @@ export default function LoginForm() {
             .catch(error => {
                 console.error("Login failed:", error);
                 alert("Login failed. Please check your email and password and try again.");
-                
-
             });
         */
         
@@ -46,6 +45,13 @@ export default function LoginForm() {
     }
 
 
+    useEffect(() => {  
+        if(sessionToken) {
+            console.log("Already logged in, redirecting to home.");
+            router.push("/home");
+        }
+    
+    },[])
 
     return (
         <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">

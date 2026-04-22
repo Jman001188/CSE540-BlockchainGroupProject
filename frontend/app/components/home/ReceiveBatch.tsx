@@ -3,17 +3,21 @@ import QRGenerator from "@/app/components/global/QRGenerator";
 import { useContext, useEffect, useState } from "react";
 import { PendingTransferData, RecipientData, TransferData } from "../utils/types";
 import { Context } from "../global/Context";
-import { testTransferListData } from "@/app/tempData";
+import { testTransferListData, acceptBatch as testAccept, rejectBatch as testReject  } from "@/app/tempData";
+import { BatchAPI, TransferBatchAPI } from "../utils/apiclient";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
 
-  const { userData, companyData } = useContext(Context)
+  const { sessionToken, userData, companyData } = useContext(Context)
 
   const [selectedItem, setSelectedItem] = useState<PendingTransferData | null>(null);
   const [pendingTransfers, setPendingTransfers] = useState<PendingTransferData[]>([]);
   const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
   const [viewSelect, setViewSelect] = useState<string>("qr code");
   const [filteredForUserTransfers, setFilteredForUserTransfers] = useState<boolean>(false);
+
+  const router = useRouter();
 
   
   useEffect(() => {
@@ -25,14 +29,30 @@ export default function LoginPage() {
       companyPublicKey: companyData?.walletAddress ?? ""
 
     }
+    
     setRecipientData(tempRecipientData)
   }, []);
  
   
   const handleRefreshPendingList = () => {
+    if (!sessionToken) router.replace("/login")
+
+    // API CALL
+    /*
+    TransferBatchAPI.getTransferList(sessionToken!)
+      .then( (response) => {
+        setPendingTransfers(response);
+        setSelectedItem(null);
+      })
+      .catch( (error) => {
+        console.error("There was an error while fetching the transfer list:", error);
+        alert("Failed toi fetch transfer list.");
+      })
+
+    */
+    // Test Logic - remove when APIs are complete
+    setPendingTransfers(testTransferListData);
     setSelectedItem(null);
-    // Fetch from API to refresh the list of pending transfers here 
-    setPendingTransfers(testTransferListData)
   };
 
   
@@ -42,15 +62,46 @@ export default function LoginPage() {
   };
 
   const acceptBatch = (item: PendingTransferData) => {
-    console.log("Accepted Item Batch ID:", item.batchId);
-    setSelectedItem(null);
+    if (!sessionToken) router.replace("/login")
+    
     // Call API to mark the batch as accepted here
+    /*
+    TransferBatchAPI.acceptTransfer(sessionToken!, selectedItem?.batchId!)
+      .then( (response) => {
+        console.log(response.message)
+        setSelectedItem(null);
+      })
+      .catch( (error) => {
+        console.error("Error while accepting transfer:", error);
+        alert("Failed to accept transfer.");
+      })
+    */
+
+    console.log("Accepted Item Batch ID:", item.batchId);
+    testAccept(selectedItem?.batchId!)
+    setSelectedItem(null);
+
   };
 
   const rejectBatch = (item: PendingTransferData) => {
-    console.log("Rejected Item Batch ID:", item.batchId);
-    setSelectedItem(null);
+    if (!sessionToken) router.replace("/login")
+    
     // Call API to mark the batch as rejected here
+    /*
+    TransferBatchAPI.rejectTransfer(sessionToken!, selectedItem?.batchId!)
+      .then( (response) => {
+        console.log(response.message)
+        setSelectedItem(null);
+      })
+      .catch( (error) => {
+        console.error("Error while rejecting transfer:", error);
+        alert("Failed to reject transfer.");
+      })
+    */
+
+    console.log("Rejected Item Batch ID:", item.batchId);
+    testReject(selectedItem?.batchId!)
+    setSelectedItem(null);
   };
 
   return (
@@ -66,7 +117,7 @@ export default function LoginPage() {
             </button>
             <button 
               className={`btn btn-sm ${viewSelect === "incoming transfers" ? 'selected-styles' : 'default-styles'}`}
-              onClick={() => setViewSelect("incoming transfers")}
+              onClick={() => {setViewSelect("incoming transfers"); handleRefreshPendingList() }}
             >
               View Incoming Transfers
             </button>
@@ -77,9 +128,10 @@ export default function LoginPage() {
           :
             <>
               <h2 className="text-lg font-bold">Pending Incoming Transfers</h2>
-              <input type="checkbox" className="checkbox" onChange={() => setFilteredForUserTransfers(!filteredForUserTransfers)} /> Refresh List
+              <button className="btn" onClick={handleRefreshPendingList}>Refresh</button>
+              <input type="checkbox" className="checkbox" onChange={() => setFilteredForUserTransfers(!filteredForUserTransfers)} />
               <div className="flex flex-col gap-3">
-                {testTransferListData.map((item) => 
+                {pendingTransfers.map((item) => 
                   filteredForUserTransfers && item.receivingUserId !== userData?.userId ? null :
                   (
                     <div
@@ -95,7 +147,7 @@ export default function LoginPage() {
 
                       <div
                         className={`mt-1 text-sm ${
-                          item.status === "accepted"
+                          item.status === "approved"
                             ? "text-green-600"
                             : "text-yellow-600"
                         }`}
