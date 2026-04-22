@@ -69,6 +69,8 @@ docker-compose up -d --build
 
 This document outlines the core PostgreSQL database schema for the Honest Harvest supply chain system.
 
+```
+
 ## 🗺️ Entity-Relationship Diagram
 
 This diagram maps how SQL tables are linked together via Primary Keys (PK) and Foreign Keys (FK).
