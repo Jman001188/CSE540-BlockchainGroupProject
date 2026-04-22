@@ -1,4 +1,4 @@
-import { Batch, CreateBatchRequest, CreateBatchResponse, CreateRegistrationTokenRequest, CreateRegistrationTokenResponse, CreateTransferRequest, CreateTransferResponse, LoginRequest, LoginResponse, RegisterUserRequest, RegistrationToken, Transfer } from "./types";
+import { Batch, CreateBatchRequest, CreateBatchResponse, CreateRegistrationTokenRequest, CreateRegistrationTokenResponse, CreateTransferRequest, CreateTransferResponse, LoginRequest, LoginResponse, PendingTransferData, RegisterUserRequest, RegistrationToken, Transfer } from "./types";
 
 const API = "http://localhost:8080";
 
@@ -35,7 +35,7 @@ export const RegistrationTokenAPI = {
     },
 
 
-    getTokenById: async (token: string): Promise<RegistrationToken> => {
+    getTokenValues: async (token: string): Promise<RegistrationToken> => {
         const response = await fetch(`${API}/auth/registration-tokens/token`, {
             method: "POST",
             headers: { 
@@ -155,7 +155,7 @@ export const TransferBatchAPI = {
         return response.json();
     },
 
-    getTransferList: async (sessionToken: string): Promise<Transfer[]> => {
+    getTransferList: async (sessionToken: string): Promise<PendingTransferData[]> => {
         const response = await fetch(`${API}/transfers/list`, {
             method: "GET",
             headers: {

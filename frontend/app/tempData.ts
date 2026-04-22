@@ -20,6 +20,25 @@ export const testProfileData: ProfileData =  {
     }
 }
 
+export const acceptBatch = (batchID: number) => {
+  const tempTransfer = testTransferListData.find( item => item.batchId === batchID)
+  if (!tempTransfer) return;
+  if (tempTransfer.status === "pending approval") {
+    tempTransfer.status = "approved"
+    console.log("Approved!")
+  }
+  else console.log("Not Awaiting Approval.")
+};
+export const rejectBatch = (batchID: number) => {
+  const tempTransfer = testTransferListData.find( item => item.batchId === batchID)
+  if (!tempTransfer) return;
+  if (tempTransfer.status === "pending approval") {
+    tempTransfer.status = "rejected"
+    console.log("Rejected!")
+  }
+  else console.log("Not Awaiting Approval.")
+};
+
 export const testTransferListData: PendingTransferData[] = [
   {
     transferId: 1,
@@ -31,7 +50,7 @@ export const testTransferListData: PendingTransferData[] = [
     senderUserName: "Test User",
     receivingUserId: 2,
     receivingUserName: "Warehouse User",
-    status: "pending",
+    status: "pending approval",
     createdAt: "2024-01-01T12:00:00Z"
   },
   {
@@ -44,10 +63,12 @@ export const testTransferListData: PendingTransferData[] = [
     senderUserName: "Test User",
     receivingUserId: 3,
     receivingUserName: "Warehouse User",
-    status: "accepted",
+    status: "approved",
     createdAt: "2024-01-01T12:00:00Z"
   }
 ];
+
+
 
 export const testBatchListData: BatchData[] = [
   { 

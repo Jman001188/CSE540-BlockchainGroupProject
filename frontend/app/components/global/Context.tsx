@@ -29,19 +29,6 @@ export const Provider = ({ children }: { children: ReactNode }) => {
     const [userData, setUserData] = useState<UserData | null>(null);
     const [companyData, setCompanyData] = useState<CompanyData | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
-    
-    const router = useRouter();
-
-    // Pathname is used to detect route changes. Everytime you navigate, useEffect triggers to check session Token. 
-    // This acts as middleware to prevent access to protected routes if the session token is invalid
-    const pathname = usePathname();
-    useEffect(() => {
-        if (sessionToken === "") {
-            console.log(`Session token invalid! Token:${sessionToken}`);
-            router.replace("/login");
-        }
-        else console.log(`Session token valid! Token:${sessionToken}`);
-    }, [pathname]);
 
     return (
         <Context.Provider value={{ sessionToken, userData, companyData, setSessionToken, setUserData, setCompanyData }}>
