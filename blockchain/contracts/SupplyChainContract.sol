@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
     Honest Harvest - SupplyChainContract
 
     Purpose:
-    Tracks batches on-chain using only essential verification data.
+    Tracks supply-chain batches on-chain using minimal verification data.
 
     Stored on-chain:
     - unique item ID
@@ -14,15 +14,20 @@ pragma solidity ^0.8.20;
     - existence flag
 
     Stored off-chain:
-    - batch name
-    - batch description
-    - registering company/user IDs
+    - batch name, description
+    - company/user IDs
     - transfer workflow records
     - transaction status
-    - any files, documents, images, certificates
+    - files, documents, certificates
+
+    Design philosophy:
+    - Keep contract simple and verifiable
+    - Backend handles business logic
+    - Blockchain acts as integrity + ownership layer
 */
 
 contract SupplyChainContract {
+
     struct Item {
         uint256 itemID;
         address owner;
@@ -34,6 +39,10 @@ contract SupplyChainContract {
 
     mapping(uint256 => Item) private items;
 
+    // Optional: prevent duplicate metadata hashes
+    mapping(bytes32 => bool) private registeredDataHashes;
+
+    // Events for backend indexing
     event ItemRegistered(
         uint256 indexed itemID,
         address indexed owner,
@@ -46,33 +55,33 @@ contract SupplyChainContract {
         address indexed to
     );
 
+    event ItemDataHashUpdated(
+        uint256 indexed itemID,
+        bytes32 indexed oldDataHash,
+        bytes32 indexed newDataHash
+    );
+
     modifier itemExists(uint256 itemID) {
         require(items[itemID].exists, "Item does not exist");
         _;
     }
 
     modifier onlyOwner(uint256 itemID) {
-        require(items[itemID].owner == msg.sender, "Caller is not the current owner");
+        require(items[itemID].owner == msg.sender, "Caller is not current owner");
         _;
     }
 
     /*
         Register a new batch/item.
 
-        Intended workflow:
-        - backend validates authenticated user/company
-        - backend computes dataHash from off-chain metadata
-        - transaction is signed by the company wallet (or via HSM on its behalf)
-        - msg.sender becomes the recorded on-chain owner
-
-        Inputs:
-        - dataHash: hash of off-chain batch metadata
-
-        Returns:
-        - newly assigned blockchain itemID
+        Workflow:
+        - backend validates user/company
+        - backend computes canonical dataHash
+        - transaction signed by company wallet
     */
     function registerItem(bytes32 dataHash) external returns (uint256) {
         require(dataHash != bytes32(0), "dataHash cannot be empty");
+        require(!registeredDataHashes[dataHash], "dataHash already registered");
 
         uint256 newID = currentID;
 
@@ -83,6 +92,8 @@ contract SupplyChainContract {
             exists: true
         });
 
+        registeredDataHashes[dataHash] = true;
+
         emit ItemRegistered(newID, msg.sender, dataHash);
 
         currentID++;
@@ -90,23 +101,14 @@ contract SupplyChainContract {
     }
 
     /*
-        Transfer ownership of an existing item to another company wallet.
-
-        Intended workflow:
-        - backend verifies transfer record is pending and receiver is authorized
-        - backend initiates blockchain transaction
-        - current owner wallet signs the transaction (or HSM signs on its behalf)
-
-        Inputs:
-        - itemID: blockchain item identifier
-        - newOwner: destination company wallet address
+        Transfer ownership to another company wallet.
     */
     function transferOwnership(
         uint256 itemID,
         address newOwner
     ) external itemExists(itemID) onlyOwner(itemID) {
-        require(newOwner != address(0), "Invalid new owner address");
-        require(newOwner != items[itemID].owner, "New owner must be different");
+        require(newOwner != address(0), "Invalid new owner");
+        require(newOwner != items[itemID].owner, "Already owner");
 
         address previousOwner = items[itemID].owner;
         items[itemID].owner = newOwner;
@@ -115,7 +117,31 @@ contract SupplyChainContract {
     }
 
     /*
-        Retrieve the on-chain record for a batch.
+        Update metadata hash when off-chain data changes.
+
+        Only current owner can update.
+    */
+    function updateItemDataHash(
+        uint256 itemID,
+        bytes32 newDataHash
+    ) external itemExists(itemID) onlyOwner(itemID) {
+        require(newDataHash != bytes32(0), "Invalid hash");
+
+        bytes32 oldDataHash = items[itemID].dataHash;
+        require(newDataHash != oldDataHash, "Hash unchanged");
+        require(!registeredDataHashes[newDataHash], "Hash already used");
+
+        // Update hash tracking
+        registeredDataHashes[oldDataHash] = false;
+        registeredDataHashes[newDataHash] = true;
+
+        items[itemID].dataHash = newDataHash;
+
+        emit ItemDataHashUpdated(itemID, oldDataHash, newDataHash);
+    }
+
+    /*
+        Get full item record.
     */
     function getItem(
         uint256 itemID
@@ -134,7 +160,7 @@ contract SupplyChainContract {
     }
 
     /*
-        Convenience getter for current owner.
+        Get current owner.
     */
     function getItemOwner(
         uint256 itemID
@@ -143,7 +169,7 @@ contract SupplyChainContract {
     }
 
     /*
-        Convenience getter for current data hash.
+        Get current data hash.
     */
     function getItemDataHash(
         uint256 itemID
@@ -152,9 +178,17 @@ contract SupplyChainContract {
     }
 
     /*
-        Convenience checker for existence.
+        Check if item exists.
     */
     function itemExistsOnChain(uint256 itemID) external view returns (bool) {
         return items[itemID].exists;
+    }
+
+    /*
+        Check if a hash is already registered.
+        Useful for backend pre-validation.
+    */
+    function isDataHashRegistered(bytes32 dataHash) external view returns (bool) {
+        return registeredDataHashes[dataHash];
     }
 }
