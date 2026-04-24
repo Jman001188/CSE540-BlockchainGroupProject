@@ -166,4 +166,3 @@ erDiagram
         TEXT status
         TEXT blockchain_status
     }
-```
