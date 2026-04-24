@@ -6,25 +6,91 @@ All endpoints accept and return JSON. For authenticated routes, pass the JWT as 
 
 ---
 
-## 🏢 0. Utility & Company Management
+## 🏢 0. Utility, Admin & Company Management
 
 ### Create a Company
 Creates a new organization in the supply chain network.
 * **Endpoint:** `POST /company`
 * **Auth Required:** No
-* **Request:** `{"name": "Origin Farm"}`
-* **Response (201):** `{"company_id": "uuid", "name": "Origin Farm", "created_at": "..."}`
+
+**Request**
+```json
+{
+  "name": "Origin Farm"
+}
+```
+
+**Response (201)**
+```json
+{
+  "company_id": "uuid",
+  "name": "Origin Farm",
+  "wallet_address": null,
+  "created_at": "timestamp"
+}
+```
 
 ### Get Company Details
 Fetches public details for a specific company.
 * **Endpoint:** `GET /company/:companyId`
 * **Auth Required:** No
-* **Response (200):** `{"company_id": "uuid", "name": "Origin Farm", "created_at": "..."}`
+
+**Response (200)**
+```json
+{
+  "company_id": "uuid",
+  "name": "Origin Farm",
+  "wallet_address": "0xABC123...",
+  "created_at": "timestamp"
+}
+```
+
+### Get All Companies
+Retrieves a list of all registered companies.
+* **Endpoint:** `GET /companies`
+* **Auth Required:** No
+
+**Response (200)**
+```json
+[
+  {
+    "company_id": "uuid",
+    "name": "Origin Farm",
+    "wallet_address": "0xABC123...",
+    "created_at": "timestamp"
+  }
+]
+```
+
+### Super Admin: Create Manager Token
+Bypasses manual SQL to instantly generate a manager registration token for a specific company (Internal Staff API).
+* **Endpoint:** `POST /auth/admin/manager-token`
+* **Auth Required:** No
+
+**Request**
+```json
+{
+  "companyId": "uuid",
+  "userEmail": "admin@example.com"
+}
+```
+
+**Response (201)**
+```json
+{
+  "registrationTokenId": "uuid",
+  "registrationToken": "hex-string"
+}
+```
 
 ### System Health Check
 * **Endpoint:** `GET /`
 * **Auth Required:** No
-* **Response (200):** `"The Honest Harvest API is running!"`
+
+**Response (200)**
+```text
+The Honest Harvest API is running!
+```
 
 ---
 
@@ -34,53 +100,176 @@ Fetches public details for a specific company.
 Creates a secure token allowing a new user to join the manager's company.
 * **Endpoint:** `POST /auth/registration-tokens`
 * **Auth Required:** Yes (Manager)
-* **Request:** `{"userEmail": "new@example.com", "role": "user"}`
-* **Response (201):** `{"registrationTokenId": "uuid", "registrationToken": "hex..."}`
+
+**Request**
+```json
+{
+  "userEmail": "new@example.com",
+  "role": "user" 
+}
+```
+*(Role can be "user" or "manager")*
+
+**Response (201)**
+```json
+{
+  "registrationTokenId": "uuid",
+  "registrationToken": "hex-string"
+}
+```
 
 ### Revoke Registration Token
 Invalidates a pending token.
 * **Endpoint:** `POST /auth/registration-tokens/:id/revoke`
 * **Auth Required:** Yes (Manager)
-* **Response (200):** `{"registrationTokenId": "uuid", "status": "revoked"}`
+
+**Response (200)**
+```json
+{
+  "registrationTokenId": "uuid",
+  "status": "revoked"
+}
+```
 
 ### Get Registration Token List
 Retrieves all registration tokens for the manager's company.
-* **Endpoint:** `GET /auth/registration-tokens`
+* **Endpoint:** `GET /auth/registration-tokens/token-list`
 * **Auth Required:** Yes (Manager)
-* **Response (200):** Array of token objects (pending, used, revoked).
+
+**Response (200)**
+```json
+[
+  {
+    "registration_token_id": "uuid",
+    "token": "hex-string",
+    "email": "user@example.com",
+    "company_id": "uuid",
+    "company_name": "Origin Farm",
+    "role": "user",
+    "status": "pending",
+    "created_by": "uuid",
+    "created_at": "timestamp",
+    "used_at": null
+  }
+]
+```
 
 ### Get Registration Token Details
 Public lookup to pre-fill registration forms.
-* **Endpoint:** `GET /auth/registration-tokens/:token`
+* **Endpoint:** `POST /auth/registration-tokens/token`
 * **Auth Required:** No
-* **Response (200):** `{"email": "...", "company_id": "...", "company_name": "...", "role": "..."}`
+
+**Request**
+```json
+{
+  "registrationToken": "hex-string"
+}
+```
+
+**Response (200)**
+```json
+{
+  "registrationToken": "hex-string",
+  "email": "user@example.com",
+  "companyId": "uuid",
+  "companyName": "Origin Farm",
+  "role": "user",
+  "status": "pending",
+  "createdAt": "timestamp"
+}
+```
 
 ### Register User
 Consumes a pending token to create a user account.
 * **Endpoint:** `POST /auth/register`
 * **Auth Required:** No
-* **Request:** `{"registrationToken": "hex...", "password": "...", "firstName": "...", "lastName": "..."}`
-* **Response (201):** `"message": "Registration successful."`
+
+**Request**
+```json
+{
+  "registrationToken": "string",
+  "password": "string",
+  "firstName": "string",
+  "lastName": "string"
+}
+```
+
+**Response (201)**
+```json
+{
+  "message": "Registration successful."
+}
+```
 
 ### User Login
-Authenticates credentials and returns the JWT.
+Authenticates credentials (email is case-insensitive) and returns the JWT.
 * **Endpoint:** `POST /auth/login`
 * **Auth Required:** No
-* **Request:** `{"email": "user@example.com", "password": "..."}`
-* **Response (200):** Returns `sessionToken`, `user` object, and `company` object.
+
+**Request**
+```json
+{
+  "email": "user@example.com",
+  "password": "string"
+}
+```
+
+**Response (200)**
+```json
+{
+  "sessionToken": "jwt-string",
+  "expiresIn": 86400,
+  "user": {
+    "userId": "uuid",
+    "firstName": "string",
+    "lastName": "string",
+    "email": "user@example.com",
+    "role": "manager"
+  },
+  "company": {
+    "companyId": "uuid",
+    "companyName": "Origin Farm",
+    "walletAddress": "0xABC123..."
+  }
+}
+```
 
 ### User Logout
 Ends a user session (client-side token deletion).
 * **Endpoint:** `POST /auth/logout`
 * **Auth Required:** Yes
-* **Response (200):** `"message": "Logged out successfully"`
+
+**Response (200)**
+```json
+{
+  "message": "Logged out successfully"
+}
+```
 
 ### Update User Profile
 Updates basic profile information (self-edit only).
 * **Endpoint:** `PATCH /users/:userId`
 * **Auth Required:** Yes
-* **Request:** `{"firstName": "Jonathan", "lastName": "Doe"}`
-* **Response (200):** Returns updated `user` object.
+
+**Request**
+```json
+{
+  "firstName": "NewFirst",
+  "lastName": "NewLast"
+}
+```
+
+**Response (200)**
+```json
+{
+  "user": {
+    "userId": "uuid",
+    "firstName": "NewFirst",
+    "lastName": "NewLast",
+    "role": "user"
+  }
+}
+```
 
 ---
 
@@ -90,20 +279,75 @@ Updates basic profile information (self-edit only).
 Introduces a product lot and prepares blockchain interaction.
 * **Endpoint:** `POST /batches`
 * **Auth Required:** Yes
-* **Request:** `{"batchName": "Coffee Beans", "batchDescription": "100kg Grade A"}`
-* **Response (201):** Returns `batchId` and blockchain status (`pending`).
+
+**Request**
+```json
+{
+  "batchName": "Coffee Beans",
+  "batchDescription": "100kg Grade A"
+}
+```
+
+**Response (201)**
+```json
+{
+  "batchId": "uuid",
+  "batchName": "Coffee Beans",
+  "batchDescription": "100kg Grade A",
+  "blockchain": {
+    "transactionId": null,
+    "status": "pending"
+  }
+}
+```
 
 ### Get Batch List
 Retrieves all batches owned by the authenticated user's company.
 * **Endpoint:** `GET /batches`
 * **Auth Required:** Yes
-* **Response (200):** Array of batch objects with blockchain sync status.
+
+**Response (200)**
+```json
+[
+  {
+    "batchId": "uuid",
+    "batchName": "Coffee Beans",
+    "batchDescription": "100kg Grade A",
+    "createdAt": "timestamp",
+    "registeringCompanyId": "uuid",
+    "registeringCompanyName": "Origin Farm",
+    "registeringUserId": "uuid",
+    "registeringUserName": "John Doe",
+    "blockchain": {
+      "transactionId": "tx-id",
+      "status": "confirmed",
+      "dataHash": "hash"
+    }
+  }
+]
+```
 
 ### Get Batch Details
 Public lookup for a specific batch.
 * **Endpoint:** `GET /batches/:batchId`
 * **Auth Required:** No
-* **Response (200):** Detailed batch metadata.
+
+**Response (200)**
+```json
+{
+  "batchId": "uuid",
+  "batchName": "Coffee Beans",
+  "batchDescription": "100kg Grade A",
+  "createdAt": "timestamp",
+  "registeringCompanyId": "uuid",
+  "registeringUserId": "uuid",
+  "blockchain": {
+    "transactionId": "tx-id",
+    "status": "confirmed",
+    "dataHash": "hash"
+  }
+}
+```
 
 ---
 
@@ -113,26 +357,79 @@ Public lookup for a specific batch.
 Creates a pending request to move a batch. Locks the batch.
 * **Endpoint:** `POST /transfers`
 * **Auth Required:** Yes (Sender)
-* **Request:** `{"batchId": "uuid", "toCompanyId": "uuid", "receivingUserID": "uuid"}`
-* **Response (201):** Returns new `transferId` with status `pending`.
+
+**Request**
+```json
+{
+  "batchId": "uuid",
+  "toCompanyId": "uuid",
+  "receivingUserID": "uuid"
+}
+```
+
+**Response (201)**
+```json
+{
+  "transferId": "uuid",
+  "batchId": "uuid",
+  "fromCompanyId": "uuid",
+  "toCompanyId": "uuid",
+  "senderUserID": "uuid",
+  "receivingUserID": "uuid",
+  "createdAt": "timestamp",
+  "status": "pending"
+}
+```
 
 ### Get Transfer List
 Fetches transfers involving the authenticated user's company.
 * **Endpoint:** `GET /transfers`
 * **Auth Required:** Yes
-* **Response (200):** Array of transfer objects.
+
+**Response (200)**
+```json
+[
+  {
+    "transferId": "uuid",
+    "batchId": "uuid",
+    "batchName": "Coffee Beans",
+    "fromCompanyId": "uuid",
+    "fromCompanyName": "Origin Farm",
+    "toCompanyId": "uuid",
+    "toCompanyName": "Destination Roasters",
+    "senderUserId": "uuid",
+    "senderUserName": "John Doe",
+    "receivingUserId": "uuid",
+    "receivingUserName": "Jane Smith",
+    "status": "pending",
+    "createdAt": "timestamp"
+  }
+]
+```
 
 ### Complete Transfer
 Finalizes transfer, shifts ownership, triggers smart contract.
 * **Endpoint:** `POST /transfers/:transferId/complete`
 * **Auth Required:** Yes (Receiver)
-* **Response (200):** `"message": "Accepted Transfer."`
+
+**Response (200)**
+```json
+{
+  "message": "Accepted Transfer."
+}
+```
 
 ### Reject Transfer
 Declines transfer, unlocking the batch for the sender.
 * **Endpoint:** `POST /transfers/:transferId/reject`
 * **Auth Required:** Yes (Receiver)
-* **Response (200):** `"message": "Rejected Transfer."`
+
+**Response (200)**
+```json
+{
+  "message": "Rejected Transfer."
+}
+```
 
 ---
 
@@ -181,3 +478,4 @@ graph LR
         POST_ACC --> DB_CHAIN
         DB_CHAIN --> A_OUT["Output: {Accepted}"]:::output
     end
+```
