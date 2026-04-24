@@ -17,7 +17,6 @@ Creates a new organization in the supply chain network.
 ```json
 {
   "name": "string",
-  "walletAddress": "0xABC123..."
 }
 ```
 
@@ -61,26 +60,6 @@ Retrieves a list of all registered companies.
     "created_at": "timestamp"
   }
 ]
-```
-
-### Link Company Wallet Address
-Attaches a Web3 wallet address to the company for smart contract interactions.
-* **Endpoint:** `PATCH /company/:companyId/wallet`
-* **Auth Required:** Yes (Manager)
-
-**Request**
-```json
-{
-  "walletAddress": "0x1234567890ABCDEF..."
-}
-```
-
-**Response (200)**
-```json
-{
-  "message": "Wallet linked successfully.",
-  "walletAddress": "0x1234567890ABCDEF..."
-}
 ```
 
 ### Super Admin: Create Manager Token

@@ -10,6 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
 const app = express();
 app.use(cors());
 app.use(express.json());
+const { ethers } = require('ethers');
 
 // Log a message on every connection
 app.use((req, res, next) => {
@@ -474,9 +475,14 @@ app.post('/transfers/:transferId/reject', authenticateToken, async (req, res) =>
 
 app.post('/company', async (req, res) => {
     try {
-        const { name, walletAddress } = req.body;
+        const { name } = req.body;
+
+        const randomWallet = ethers.Wallet.createRandom();
+        const generatedWalletAddress = randomWallet.address;
+        const privateKey = randomWallet.privateKey; 
+        
         const sql = "INSERT INTO companies (name, wallet_address) VALUES ($1, $2) RETURNING *";
-        const result = await db.query(sql, [name, walletAddress || null]);
+        const result = await db.query(sql, [name, generatedWalletAddress]);
         
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -524,29 +530,6 @@ app.post('/auth/admin/manager-token', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to create super admin token" });
-    }
-});
-
-// Link/Update Company Wallet Address (Managers Only)
-app.patch('/company/:companyId/wallet', authenticateToken, requireManager, async (req, res) => {
-    try {
-        // Security: Ensure the manager can only update their own company's wallet
-        if (req.user.companyId !== req.params.companyId) {
-            return res.status(403).json({ error: "Unauthorized to update this company's wallet" });
-        }
-
-        const sql = `UPDATE companies SET wallet_address = $1 WHERE company_id = $2 RETURNING *`;
-        const result = await db.query(sql, [req.body.walletAddress, req.params.companyId]);
-        
-        if (result.rowCount === 0) return res.status(404).json({ error: "Company not found" });
-        
-        res.json({ 
-            message: "Wallet linked successfully.",
-            walletAddress: result.rows[0].wallet_address 
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to link wallet address" });
     }
 });
 
