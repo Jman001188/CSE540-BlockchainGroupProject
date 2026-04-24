@@ -25,7 +25,7 @@ Creates a new organization in the supply chain network.
 {
   "company_id": "uuid",
   "name": "string",
-  "wallet_address": null,
+  "wallet_address": "0xABC123...",
   "created_at": "timestamp"
 }
 ```
@@ -126,7 +126,7 @@ Invalidates a pending token.
 **Response (200)**
 ```json
 {
-  "registrationTokenId": "uuid",
+  "registration_token_id": "uuid",
   "status": "revoked"
 }
 ```
@@ -369,7 +369,7 @@ Creates a pending request to move a batch. Locks the batch.
 {
   "batchId": "uuid",
   "toCompanyId": "uuid",
-  "receivingUserID": "uuid"
+  "receivingUserId": "uuid"
 }
 ```
 
@@ -380,8 +380,8 @@ Creates a pending request to move a batch. Locks the batch.
   "batchId": "uuid",
   "fromCompanyId": "uuid",
   "toCompanyId": "uuid",
-  "senderUserID": "uuid",
-  "receivingUserID": "uuid",
+  "senderUserId": "uuid",
+  "receivingUserId": "uuid",
   "createdAt": "timestamp",
   "status": "pending"
 }
