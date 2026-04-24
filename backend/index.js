@@ -87,12 +87,26 @@ app.post('/auth/registration-tokens/:id/revoke', authenticateToken, requireManag
 app.get('/auth/registration-tokens/token-list', authenticateToken, requireManager, async (req, res) => {
     try {
         const sql = `
-            SELECT rt.*, c.name as company_name 
+            SELECT rt.*, c.name as company_name, u.first_name || ' ' || u.last_name as created_by_name
             FROM registration_tokens rt 
             JOIN companies c ON rt.company_id = c.company_id 
+            LEFT JOIN users u ON rt.created_by = u.user_id
             WHERE rt.company_id = $1`;
         const result = await db.query(sql, [req.user.companyId]);
-        res.json(result.rows);
+        
+        const formatted = result.rows.map(rt => ({
+            tokenId: rt.registration_token_id,
+            registrationToken: rt.token,
+            email: rt.email,
+            companyId: rt.company_id,
+            companyName: rt.company_name,
+            role: rt.role,
+            status: rt.status,
+            createdAt: rt.created_at,
+            createdById: rt.created_by,
+            createdByName: rt.created_by_name
+        }));
+        res.json(formatted);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch tokens" });
@@ -103,10 +117,13 @@ app.get('/auth/registration-tokens/token-list', authenticateToken, requireManage
 app.post('/auth/registration-tokens/token', async (req, res) => {
     try {
         const sql = `
-            SELECT rt.token as "registrationToken", rt.email, rt.company_id as "companyId", 
-                   c.name as "companyName", rt.role, rt.status, rt.created_at as "createdAt"
+            SELECT rt.registration_token_id as "tokenId", rt.token as "registrationToken", 
+                   rt.email, rt.company_id as "companyId", c.name as "companyName", 
+                   rt.role, rt.status, rt.created_at as "createdAt", 
+                   rt.created_by as "createdById", u.first_name || ' ' || u.last_name as "createdByName"
             FROM registration_tokens rt 
             JOIN companies c ON rt.company_id = c.company_id 
+            LEFT JOIN users u ON rt.created_by = u.user_id
             WHERE rt.token = $1 AND rt.status = 'pending'`;
         const result = await db.query(sql, [req.body.registrationToken]);
         
@@ -161,7 +178,7 @@ app.post('/auth/login', async (req, res) => {
             SELECT u.*, c.name as company_name, c.wallet_address 
             FROM users u 
             JOIN companies c ON u.company_id = c.company_id 
-            WHERE u.email = $1`;
+            WHERE LOWER(u.email) = LOWER($1)`; 
         
         const result = await db.query(sql, [req.body.email]);
         const user = result.rows[0];
@@ -248,6 +265,7 @@ app.post('/batches', authenticateToken, async (req, res) => {
             batchId: batch.batch_id,
             batchName: batch.batch_name,
             batchDescription: batch.batch_description,
+            createdAt: batch.created_at,
             blockchain: {
                 transactionId: batch.blockchain_tx_id,
                 status: batch.blockchain_status
@@ -295,7 +313,13 @@ app.get('/batches', authenticateToken, async (req, res) => {
 // Get Batch Details (Public view of the batch)
 app.get('/batches/:batchId', async (req, res) => {
     try {
-        const sql = `SELECT * FROM batches WHERE batch_id = $1`;
+        const sql = `
+            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name 
+            FROM batches b
+            JOIN companies c ON b.company_id = c.company_id
+            JOIN users u ON b.created_by = u.user_id
+            WHERE b.batch_id = $1`;
+            
         const result = await db.query(sql, [req.params.batchId]);
         if (result.rowCount === 0) return res.status(404).json({ error: "Batch not found" });
         
@@ -306,7 +330,9 @@ app.get('/batches/:batchId', async (req, res) => {
             batchDescription: b.batch_description,
             createdAt: b.created_at,
             registeringCompanyId: b.company_id,
+            registeringCompanyName: b.registering_company_name,
             registeringUserId: b.created_by,
+            registeringUserName: b.registering_user_name,
             blockchain: {
                 transactionId: b.blockchain_tx_id,
                 status: b.blockchain_status,
@@ -458,6 +484,38 @@ app.get('/company/:companyId', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Fetch error" });
+    }
+});
+
+// Get All Companies
+app.get('/companies', async (req, res) => {
+    try {
+        const sql = "SELECT * FROM companies ORDER BY created_at DESC";
+        const result = await db.query(sql);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch companies" });
+    }
+});
+
+// Super Admin: Create Manager Token for a Company (Utility)
+app.post('/auth/admin/manager-token', async (req, res) => {
+    try {
+        const { companyId, userEmail } = req.body;
+        const secureToken = crypto.randomBytes(32).toString('hex');
+
+        const sql = `INSERT INTO registration_tokens (token, email, company_id, role, status) 
+                     VALUES ($1, $2, $3, 'manager', 'pending') RETURNING registration_token_id, token`;
+        const result = await db.query(sql, [secureToken, userEmail, companyId]);
+        
+        res.status(201).json({
+            registrationTokenId: result.rows[0].registration_token_id,
+            registrationToken: result.rows[0].token
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to create super admin token" });
     }
 });
 
