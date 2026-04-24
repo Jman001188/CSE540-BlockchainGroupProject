@@ -281,7 +281,7 @@ app.post('/batches', authenticateToken, async (req, res) => {
 app.get('/batches', authenticateToken, async (req, res) => {
     try {
         const sql = `
-            SELECT b.*, c.name as registering_company_name, u.first_name as registering_user_name 
+            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name 
             FROM batches b
             JOIN companies c ON b.company_id = c.company_id
             JOIN users u ON b.created_by = u.user_id
@@ -348,6 +348,12 @@ app.get('/batches/:batchId', async (req, res) => {
 // Initiate Transfer
 app.post('/transfers', authenticateToken, async (req, res) => {
     try {
+        // SECURITY CHECK: Ensure the sender's company actually owns this batch!
+        const batchQuery = await db.query("SELECT company_id FROM batches WHERE batch_id = $1", [req.body.batchId]);
+        if (batchQuery.rowCount === 0 || batchQuery.rows[0].company_id !== req.user.companyId) {
+            return res.status(403).json({ error: "Unauthorized: Your company does not own this batch." });
+        }
+
         const sql = `INSERT INTO transfers (batch_id, from_company_id, to_company_id, sender_user_id, receiving_user_id, status) 
                      VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING *`;
         const result = await db.query(sql, [
@@ -355,7 +361,7 @@ app.post('/transfers', authenticateToken, async (req, res) => {
             req.user.companyId, 
             req.body.toCompanyId, 
             req.user.userId,
-            req.body.receivingUserID
+            req.body.receivingUserId
         ]);
         
         const t = result.rows[0];
@@ -364,8 +370,8 @@ app.post('/transfers', authenticateToken, async (req, res) => {
             batchId: t.batch_id,
             fromCompanyId: t.from_company_id,
             toCompanyId: t.to_company_id,
-            senderUserID: t.sender_user_id,
-            receivingUserID: t.receiving_user_id,
+            senderUserId: t.sender_user_id,
+            receivingUserId: t.receiving_user_id,
             createdAt: t.created_at,
             status: t.status
         });
@@ -468,8 +474,10 @@ app.post('/transfers/:transferId/reject', authenticateToken, async (req, res) =>
 
 app.post('/company', async (req, res) => {
     try {
-        const sql = "INSERT INTO companies (name) VALUES ($1) RETURNING *";
-        const result = await db.query(sql, [req.body.name]);
+        const { name, walletAddress } = req.body;
+        const sql = "INSERT INTO companies (name, wallet_address) VALUES ($1, $2) RETURNING *";
+        const result = await db.query(sql, [name, walletAddress || null]);
+        
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error(err);
@@ -516,6 +524,29 @@ app.post('/auth/admin/manager-token', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to create super admin token" });
+    }
+});
+
+// Link/Update Company Wallet Address (Managers Only)
+app.patch('/company/:companyId/wallet', authenticateToken, requireManager, async (req, res) => {
+    try {
+        // Security: Ensure the manager can only update their own company's wallet
+        if (req.user.companyId !== req.params.companyId) {
+            return res.status(403).json({ error: "Unauthorized to update this company's wallet" });
+        }
+
+        const sql = `UPDATE companies SET wallet_address = $1 WHERE company_id = $2 RETURNING *`;
+        const result = await db.query(sql, [req.body.walletAddress, req.params.companyId]);
+        
+        if (result.rowCount === 0) return res.status(404).json({ error: "Company not found" });
+        
+        res.json({ 
+            message: "Wallet linked successfully.",
+            walletAddress: result.rows[0].wallet_address 
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to link wallet address" });
     }
 });
 

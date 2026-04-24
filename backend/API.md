@@ -16,7 +16,8 @@ Creates a new organization in the supply chain network.
 **Request**
 ```json
 {
-  "name": "string"
+  "name": "string",
+  "walletAddress": "0xABC123..."
 }
 ```
 
@@ -25,7 +26,7 @@ Creates a new organization in the supply chain network.
 {
   "company_id": "uuid",
   "name": "string",
-  "wallet_address": null,
+  "wallet_address": "0xABC123...",
   "created_at": "timestamp"
 }
 ```
@@ -60,6 +61,26 @@ Retrieves a list of all registered companies.
     "created_at": "timestamp"
   }
 ]
+```
+
+### Link Company Wallet Address
+Attaches a Web3 wallet address to the company for smart contract interactions.
+* **Endpoint:** `PATCH /company/:companyId/wallet`
+* **Auth Required:** Yes (Manager)
+
+**Request**
+```json
+{
+  "walletAddress": "0x1234567890ABCDEF..."
+}
+```
+
+**Response (200)**
+```json
+{
+  "message": "Wallet linked successfully.",
+  "walletAddress": "0x1234567890ABCDEF..."
+}
 ```
 
 ### Super Admin: Create Manager Token
@@ -126,7 +147,7 @@ Invalidates a pending token.
 **Response (200)**
 ```json
 {
-  "registrationTokenId": "uuid",
+  "registration_token_id": "uuid",
   "status": "revoked"
 }
 ```
@@ -369,7 +390,7 @@ Creates a pending request to move a batch. Locks the batch.
 {
   "batchId": "uuid",
   "toCompanyId": "uuid",
-  "receivingUserID": "uuid"
+  "receivingUserId": "uuid"
 }
 ```
 
@@ -380,8 +401,8 @@ Creates a pending request to move a batch. Locks the batch.
   "batchId": "uuid",
   "fromCompanyId": "uuid",
   "toCompanyId": "uuid",
-  "senderUserID": "uuid",
-  "receivingUserID": "uuid",
+  "senderUserId": "uuid",
+  "receivingUserId": "uuid",
   "createdAt": "timestamp",
   "status": "pending"
 }
