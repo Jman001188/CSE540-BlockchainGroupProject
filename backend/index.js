@@ -161,7 +161,7 @@ app.post('/auth/login', async (req, res) => {
             SELECT u.*, c.name as company_name, c.wallet_address 
             FROM users u 
             JOIN companies c ON u.company_id = c.company_id 
-            WHERE u.email = $1`;
+            WHERE LOWER(u.email) = LOWER($1)`; 
         
         const result = await db.query(sql, [req.body.email]);
         const user = result.rows[0];
@@ -458,6 +458,38 @@ app.get('/company/:companyId', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Fetch error" });
+    }
+});
+
+// Get All Companies
+app.get('/companies', async (req, res) => {
+    try {
+        const sql = "SELECT * FROM companies ORDER BY created_at DESC";
+        const result = await db.query(sql);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch companies" });
+    }
+});
+
+// Super Admin: Create Manager Token for a Company (Utility)
+app.post('/auth/admin/manager-token', async (req, res) => {
+    try {
+        const { companyId, userEmail } = req.body;
+        const secureToken = crypto.randomBytes(32).toString('hex');
+
+        const sql = `INSERT INTO registration_tokens (token, email, company_id, role, status) 
+                     VALUES ($1, $2, $3, 'manager', 'pending') RETURNING registration_token_id, token`;
+        const result = await db.query(sql, [secureToken, userEmail, companyId]);
+        
+        res.status(201).json({
+            registrationTokenId: result.rows[0].registration_token_id,
+            registrationToken: result.rows[0].token
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to create super admin token" });
     }
 });
 
