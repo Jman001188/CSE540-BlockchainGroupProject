@@ -109,7 +109,7 @@ This document outlines the core PostgreSQL database schema for the Honest Harves
 
 This diagram maps how SQL tables are linked together via Primary Keys (PK) and Foreign Keys (FK).
 
-``mermaid
+```mermaid
 erDiagram
     COMPANIES ||--o{ USERS : "employs"
     COMPANIES ||--o{ REGISTRATION_TOKENS : "issues"
