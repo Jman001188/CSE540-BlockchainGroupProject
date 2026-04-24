@@ -16,7 +16,7 @@ Creates a new organization in the supply chain network.
 **Request**
 ```json
 {
-  "name": "string",
+  "name": "string"
 }
 ```
 
