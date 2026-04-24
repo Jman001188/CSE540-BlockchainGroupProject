@@ -51,7 +51,7 @@ app.post('/auth/registration-tokens', authenticateToken, requireManager, async (
         const { userEmail, role } = req.body;
         console.log(userEmail)
         console.log(role)
-        const companyId = req.user.companyId; // Force token to match manager's company
+        const companyId = req.user.companyId;
         const secureToken = crypto.randomBytes(32).toString('hex');
 
         const sql = `INSERT INTO registration_tokens (token, email, company_id, role, created_by) 
