@@ -19,9 +19,7 @@ app.use((req, res, next) => {
 
 // --- SECURITY MIDDLEWARE ---
 
-// Middleware to authenticate and parse the JWT
 const authenticateToken = (req, res, next) => {
-    // API docs mention token in body OR headers. We will check body first, then fallback to header.
     let token = req.body?.sessionToken;
     if (!token) {
         const authHeader = req.headers['authorization'];
@@ -86,7 +84,7 @@ app.post('/auth/registration-tokens/:id/revoke', authenticateToken, requireManag
 });
 
 // Get Registration Token List (Managers Only)
-app.get('/auth/registration-tokens', authenticateToken, requireManager, async (req, res) => {
+app.get('/auth/registration-tokens/token-list', authenticateToken, requireManager, async (req, res) => {
     try {
         const sql = `
             SELECT rt.*, c.name as company_name 
@@ -102,14 +100,15 @@ app.get('/auth/registration-tokens', authenticateToken, requireManager, async (r
 });
 
 // Get Registration Token Info (Public - for pre-filling signup form)
-app.get('/auth/registration-tokens/:token', async (req, res) => {
+app.post('/auth/registration-tokens/token', async (req, res) => {
     try {
         const sql = `
-            SELECT rt.email, rt.company_id, c.name as company_name, rt.role 
+            SELECT rt.token as "registrationToken", rt.email, rt.company_id as "companyId", 
+                   c.name as "companyName", rt.role, rt.status, rt.created_at as "createdAt"
             FROM registration_tokens rt 
             JOIN companies c ON rt.company_id = c.company_id 
             WHERE rt.token = $1 AND rt.status = 'pending'`;
-        const result = await db.query(sql, [req.params.token]);
+        const result = await db.query(sql, [req.body.registrationToken]);
         
         if (result.rowCount === 0) return res.status(404).json({ error: "Invalid or expired token" });
         res.json(result.rows[0]);
@@ -157,9 +156,9 @@ app.post('/auth/register', async (req, res) => {
 
 // User Login
 app.post('/auth/login', async (req, res) => {
-    try {
+    try {        
         const sql = `
-            SELECT u.*, c.name as company_name 
+            SELECT u.*, c.name as company_name, c.wallet_address 
             FROM users u 
             JOIN companies c ON u.company_id = c.company_id 
             WHERE u.email = $1`;
@@ -176,6 +175,7 @@ app.post('/auth/login', async (req, res) => {
             console.log("Login Successful!")
             res.json({
                 sessionToken: token,
+                expiresIn: 86400, // 24 hours in seconds
                 user: { 
                     userId: user.user_id, 
                     firstName: user.first_name, 
@@ -185,7 +185,8 @@ app.post('/auth/login', async (req, res) => {
                 },
                 company: { 
                     companyId: user.company_id, 
-                    companyName: user.company_name 
+                    companyName: user.company_name,
+                    walletAddress: user.wallet_address
                 }
             });
         } else {
@@ -200,7 +201,6 @@ app.post('/auth/login', async (req, res) => {
 
 // User Logout
 app.post('/auth/logout', authenticateToken, (req, res) => {
-    // In a stateless JWT system, the client deletes the token. 
     res.json({ message: "Logged out successfully" });
 });
 
@@ -352,16 +352,36 @@ app.post('/transfers', authenticateToken, async (req, res) => {
 // Get Transfer List
 app.get('/transfers', authenticateToken, async (req, res) => {
     try {
-        const sql = `SELECT * FROM transfers WHERE from_company_id = $1 OR to_company_id = $1`;
+        const sql = `
+            SELECT 
+                t.*,
+                b.batch_name,
+                c1.name as from_company_name,
+                c2.name as to_company_name,
+                u1.first_name || ' ' || u1.last_name as sender_user_name,
+                u2.first_name || ' ' || u2.last_name as receiving_user_name
+            FROM transfers t
+            JOIN batches b ON t.batch_id = b.batch_id
+            JOIN companies c1 ON t.from_company_id = c1.company_id
+            JOIN companies c2 ON t.to_company_id = c2.company_id
+            JOIN users u1 ON t.sender_user_id = u1.user_id
+            LEFT JOIN users u2 ON t.receiving_user_id = u2.user_id
+            WHERE t.from_company_id = $1 OR t.to_company_id = $1`;
+            
         const result = await db.query(sql, [req.user.companyId]);
         
         const formatted = result.rows.map(t => ({
             transferId: t.transfer_id,
             batchId: t.batch_id,
+            batchName: t.batch_name,
             fromCompanyId: t.from_company_id,
+            fromCompanyName: t.from_company_name,
             toCompanyId: t.to_company_id,
+            toCompanyName: t.to_company_name,
             senderUserId: t.sender_user_id,
+            senderUserName: t.sender_user_name,
             receivingUserId: t.receiving_user_id,
+            receivingUserName: t.receiving_user_name,
             status: t.status,
             createdAt: t.created_at
         }));
@@ -420,7 +440,6 @@ app.post('/transfers/:transferId/reject', authenticateToken, async (req, res) =>
 
 // --- SYSTEM ---
 
-// Create initial company (Utility route for testing, since registration requires a company)
 app.post('/company', async (req, res) => {
     try {
         const sql = "INSERT INTO companies (name) VALUES ($1) RETURNING *";
