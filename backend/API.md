@@ -16,7 +16,7 @@ Creates a new organization in the supply chain network.
 **Request**
 ```json
 {
-  "name": "Origin Farm"
+  "name": "string"
 }
 ```
 
@@ -24,7 +24,7 @@ Creates a new organization in the supply chain network.
 ```json
 {
   "company_id": "uuid",
-  "name": "Origin Farm",
+  "name": "string",
   "wallet_address": null,
   "created_at": "timestamp"
 }
@@ -39,7 +39,7 @@ Fetches public details for a specific company.
 ```json
 {
   "company_id": "uuid",
-  "name": "Origin Farm",
+  "name": "string",
   "wallet_address": "0xABC123...",
   "created_at": "timestamp"
 }
@@ -55,7 +55,7 @@ Retrieves a list of all registered companies.
 [
   {
     "company_id": "uuid",
-    "name": "Origin Farm",
+    "name": "string",
     "wallet_address": "0xABC123...",
     "created_at": "timestamp"
   }
@@ -140,16 +140,16 @@ Retrieves all registration tokens for the manager's company.
 ```json
 [
   {
-    "registration_token_id": "uuid",
-    "token": "hex-string",
+    "tokenId": "uuid",
+    "registrationToken": "hex-string",
     "email": "user@example.com",
-    "company_id": "uuid",
-    "company_name": "Origin Farm",
+    "companyId": "uuid",
+    "companyName": "string",
     "role": "user",
     "status": "pending",
-    "created_by": "uuid",
-    "created_at": "timestamp",
-    "used_at": null
+    "createdAt": "timestamp",
+    "createdById": "uuid",
+    "createdByName": "string"
   }
 ]
 ```
@@ -169,13 +169,16 @@ Public lookup to pre-fill registration forms.
 **Response (200)**
 ```json
 {
+  "tokenId": "uuid",
   "registrationToken": "hex-string",
   "email": "user@example.com",
   "companyId": "uuid",
-  "companyName": "Origin Farm",
+  "companyName": "string",
   "role": "user",
   "status": "pending",
-  "createdAt": "timestamp"
+  "createdAt": "timestamp",
+  "createdById": "uuid",
+  "createdByName": "string"
 }
 ```
 
@@ -228,7 +231,7 @@ Authenticates credentials (email is case-insensitive) and returns the JWT.
   },
   "company": {
     "companyId": "uuid",
-    "companyName": "Origin Farm",
+    "companyName": "string",
     "walletAddress": "0xABC123..."
   }
 }
@@ -283,8 +286,8 @@ Introduces a product lot and prepares blockchain interaction.
 **Request**
 ```json
 {
-  "batchName": "Coffee Beans",
-  "batchDescription": "100kg Grade A"
+  "batchName": "string",
+  "batchDescription": "string"
 }
 ```
 
@@ -292,8 +295,9 @@ Introduces a product lot and prepares blockchain interaction.
 ```json
 {
   "batchId": "uuid",
-  "batchName": "Coffee Beans",
-  "batchDescription": "100kg Grade A",
+  "batchName": "string",
+  "batchDescription": "string",
+  "createdAt": "timestamp",
   "blockchain": {
     "transactionId": null,
     "status": "pending"
@@ -311,13 +315,13 @@ Retrieves all batches owned by the authenticated user's company.
 [
   {
     "batchId": "uuid",
-    "batchName": "Coffee Beans",
-    "batchDescription": "100kg Grade A",
+    "batchName": "string",
+    "batchDescription": "string",
     "createdAt": "timestamp",
     "registeringCompanyId": "uuid",
-    "registeringCompanyName": "Origin Farm",
+    "registeringCompanyName": "string",
     "registeringUserId": "uuid",
-    "registeringUserName": "John Doe",
+    "registeringUserName": "string",
     "blockchain": {
       "transactionId": "tx-id",
       "status": "confirmed",
@@ -336,11 +340,13 @@ Public lookup for a specific batch.
 ```json
 {
   "batchId": "uuid",
-  "batchName": "Coffee Beans",
-  "batchDescription": "100kg Grade A",
+  "batchName": "string",
+  "batchDescription": "string",
   "createdAt": "timestamp",
   "registeringCompanyId": "uuid",
+  "registeringCompanyName": "string",
   "registeringUserId": "uuid",
+  "registeringUserName": "string",
   "blockchain": {
     "transactionId": "tx-id",
     "status": "confirmed",
@@ -392,15 +398,15 @@ Fetches transfers involving the authenticated user's company.
   {
     "transferId": "uuid",
     "batchId": "uuid",
-    "batchName": "Coffee Beans",
+    "batchName": "string",
     "fromCompanyId": "uuid",
-    "fromCompanyName": "Origin Farm",
+    "fromCompanyName": "string",
     "toCompanyId": "uuid",
-    "toCompanyName": "Destination Roasters",
+    "toCompanyName": "string",
     "senderUserId": "uuid",
-    "senderUserName": "John Doe",
+    "senderUserName": "string",
     "receivingUserId": "uuid",
-    "receivingUserName": "Jane Smith",
+    "receivingUserName": "string",
     "status": "pending",
     "createdAt": "timestamp"
   }
@@ -468,3 +474,4 @@ graph LR
         direction LR
         TR_API["POST /transfers<br>GET /transfers<br>POST .../:id/complete<br>POST .../:id/reject"]:::endpoint --> DB_CHAIN
     end
+```
