@@ -223,18 +223,18 @@ Authenticates user credentials and returns a session token.
 ```json
 {
   "sessionToken": "<JWT Token>",
-  "expiresIn": number
+  "expiresIn": number,
   "user": {
     "userId": number,
     "firstName": string,
     "lastName": string,
-	"email": string,
-    "role": "user | manager"
+	  "email": string,
+    "role": "user | manager",
   },
   "company": {
     "companyId": number,
     "companyName": string,
-	"walletAddress": string
+	  "walletAddress": string,
   }
 }
 ```
@@ -457,7 +457,7 @@ Authorization: Bearer <sessionToken>
     "fromCompanyName": string,
     "toCompanyName": string,
     "senderUserId": number,
-	  "senderUserName: string,
+	  "senderUserName": string,
     "receivingUserId": number,
 	  "receivingUserName": string,
     "status": "pending approval | approved | rejected | transfer complete | transfer failed",
