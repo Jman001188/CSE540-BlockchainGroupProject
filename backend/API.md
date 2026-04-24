@@ -438,44 +438,33 @@ Declines transfer, unlocking the batch for the sender.
 ```mermaid
 graph LR
     classDef endpoint fill:#2b3a42,stroke:#5c8397,stroke-width:2px,color:#fff,rx:5px,ry:5px;
-    classDef input fill:#eef2f5,stroke:#b0c4de,stroke-width:1px,color:#333;
-    classDef output fill:#d4edda,stroke:#28a745,stroke-width:1px,color:#155724;
     classDef db fill:#fdfd96,stroke:#ffb347,stroke-width:2px,color:#333,shape:cylinder;
 
     DB_COMP[(Companies DB)]:::db
-    DB_USER[(Users DB)]:::db
+    DB_USER[(Users/Tokens DB)]:::db
     DB_CHAIN[(Supply Chain DB)]:::db
 
-    subgraph Token_Gen [Manager Token Generation]
+    subgraph Company_Management [🏢 Companies & System]
         direction LR
-        M_IN["Auth: Manager JWT<br>Input: {email, role}"]:::input --> POST_TOK["POST /auth/registration-tokens"]:::endpoint
-        POST_TOK --> DB_USER
-        DB_USER --> M_OUT["Output: {Token Hex}"]:::output
+        C_API["POST /company<br>GET /company/:id<br>GET /companies<br>GET / (Health Check)"]:::endpoint --> DB_COMP
     end
 
-    subgraph Auth [User Authentication]
+    subgraph Token_Management [🔑 Token Management]
         direction LR
-        R_IN["Input: {Token Hex, pass...}"]:::input --> POST_REG["POST /auth/register"]:::endpoint
-        POST_REG --> DB_USER
-        DB_USER --> R_OUT["Output: Success"]:::output
-
-        L_IN["Input: {email, pass}"]:::input --> POST_LOG["POST /auth/login"]:::endpoint
-        POST_LOG --> DB_USER
-        DB_USER --> L_OUT["Output: {Session JWT}"]:::output
+        T_API["POST /auth/registration-tokens<br>POST .../:id/revoke<br>GET .../token-list<br>POST /auth/admin/manager-token"]:::endpoint --> DB_USER
     end
 
-    subgraph Supply_Chain [Supply Chain & Transfers]
+    subgraph User_Auth [🔐 Users & Authentication]
         direction LR
-        B_IN["Auth: JWT<br>Input: {batchName}"]:::input --> POST_BATCH["POST /batches"]:::endpoint
-        POST_BATCH --> DB_CHAIN
-        DB_CHAIN --> B_OUT["Output: {Batch Details}"]:::output
-
-        T_IN["Auth: JWT<br>Input: {batchId, toCompanyId}"]:::input --> POST_TRANS["POST /transfers"]:::endpoint
-        POST_TRANS --> DB_CHAIN
-        DB_CHAIN --> T_OUT["Output: {Pending Transfer}"]:::output
-
-        A_IN["Auth: Receiver JWT<br>URL: :transferId"]:::input --> POST_ACC["POST /transfers/:id/complete"]:::endpoint
-        POST_ACC --> DB_CHAIN
-        DB_CHAIN --> A_OUT["Output: {Accepted}"]:::output
+        U_API["POST /auth/register<br>POST /auth/login<br>POST /auth/logout<br>PATCH /users/:userId<br>POST .../token (Lookup)"]:::endpoint --> DB_USER
     end
-```
+
+    subgraph Supply_Chain [📦 Batches]
+        direction LR
+        B_API["POST /batches<br>GET /batches<br>GET /batches/:batchId"]:::endpoint --> DB_CHAIN
+    end
+
+    subgraph Transfer_Flow [🚚 Transfers]
+        direction LR
+        TR_API["POST /transfers<br>GET /transfers<br>POST .../:id/complete<br>POST .../:id/reject"]:::endpoint --> DB_CHAIN
+    end
