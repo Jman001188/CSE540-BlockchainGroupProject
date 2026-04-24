@@ -43,7 +43,6 @@ export interface RecipientQrData {
 export interface CompanyData {
     companyId: number | null;
     companyName: string | null;
-    permission: string | null; //Don't know what this field represents user role should account for any needed company permissions
     walletAddress: string | null;
 };
 
@@ -142,7 +141,7 @@ export interface CreateRegistrationTokenResponse {
 }
 
 export interface RegistrationToken {
-  tokenId: number;
+  registration_token_id: number;
   registrationToken: string;
   userId: number;
   email: string;

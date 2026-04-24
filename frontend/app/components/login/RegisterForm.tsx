@@ -50,7 +50,6 @@
     }
 
     const submitRegistrationToken = () => {
-        /*
         RegistrationTokenAPI.getTokenValues(registrationToken)
             .then( (response) => {
                 setEmail(response.email);
@@ -60,9 +59,8 @@
                 console.error("Error using token:", error);
                 alert("Failed to use registration token.");
             });
-        */
-        setEmail("testemail@test.com");
-        setHasSubmittedToken(true);
+        //setEmail("testemail@test.com");
+        //setHasSubmittedToken(true);
     };
 
     const clearFields = () => {
@@ -75,8 +73,27 @@
         setHasSubmittedToken(false);
     };
 
-    const registerButton = () => {
-        // API
+    const registerUserButton = () => {
+        if (!verifyRequiredFields) return;
+        
+        const apiPayload = {
+            registrationToken: registrationToken,
+            password: password,
+            firstName: firstName,
+            lastName: lastName
+        };
+
+        RegistrationTokenAPI.consumeToken(apiPayload)
+            .then( (response) => {
+                console.log(response.message)
+                clearFields;
+                router.replace("/login");
+                alert("Registration Successful! Please use your credentials to sign in.")
+            })
+            .catch( (error) => {
+                console.error("Error using token:", error);
+                alert("Failed to use registration token.");
+            });
     };
     
 
@@ -120,7 +137,7 @@
                             className="input" 
                             placeholder="Password" 
                             value={password} 
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(e: { target: { value: any; }; }) => setPassword(e.target.value)}
                         />
                         
                         <label className="label">Confirm Password</label>
@@ -152,7 +169,7 @@
 
                         <button className="btn btn-neutral mt-4"
                             disabled={ verifyRequiredFields! ? false : true }
-                            onClick={ () => verifyRequiredFields() ? registerButton : null }
+                            onClick={ registerUserButton }
                         >
                             Confirm Registration
                         </button>

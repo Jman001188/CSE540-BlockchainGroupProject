@@ -11,6 +11,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Log a message on every connection
+app.use((req, res, next) => {
+    console.log(`${req.method}: ${req.url}`);
+    next();
+});
+
 // --- SECURITY MIDDLEWARE ---
 
 // Middleware to authenticate and parse the JWT
@@ -45,6 +51,8 @@ const requireManager = (req, res, next) => {
 app.post('/auth/registration-tokens', authenticateToken, requireManager, async (req, res) => {
     try {
         const { userEmail, role } = req.body;
+        console.log(userEmail)
+        console.log(role)
         const companyId = req.user.companyId; // Force token to match manager's company
         const secureToken = crypto.randomBytes(32).toString('hex');
 
@@ -165,7 +173,7 @@ app.post('/auth/login', async (req, res) => {
                 JWT_SECRET, 
                 { expiresIn: '24h' }
             );
-            
+            console.log("Login Successful!")
             res.json({
                 sessionToken: token,
                 user: { 
@@ -181,6 +189,7 @@ app.post('/auth/login', async (req, res) => {
                 }
             });
         } else {
+            console.log("Login Failed: Invalid Email or Password.")
             res.status(401).json({ error: "Invalid email or password" });
         }
     } catch (err) {

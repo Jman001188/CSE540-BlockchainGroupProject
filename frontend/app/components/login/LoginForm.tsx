@@ -2,8 +2,9 @@
 import { useRouter } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import { Context } from "../global/Context";
-import { ProfileData, UserData } from "../utils/types";
+import { LoginRequest, ProfileData, UserData } from "../utils/types";
 import { testProfileData } from "@/app/tempData";
+import { AuthAPI } from "../utils/apiclient";
 
 
 
@@ -17,31 +18,35 @@ export default function LoginForm() {
     const {sessionToken, setSessionToken, setUserData, setCompanyData } = useContext(Context);
 
     const loginButtonHandler = () => {
-        /*
-        api.UserLogin({ email, password })
+        const apiPayload: LoginRequest= {
+            email: email,
+            password: password,
+        };
+
+        AuthAPI.login(apiPayload)
             .then(response => {
-                // store session token or user info from response
-                console.log("Login successful:", response);
+                
                 setSessionToken(response.sessionToken);
                 setUserData(response.user);
-                setCompanyData(response.company);
+                setCompanyData( {...response.company, walletAddress: ""} ); // Fix this once API passes walletAddress
                 
                 setEmail("");
                 setPassword("");
+                console.log("Login successful:", response);
                 router.push("/home");
             })
             .catch(error => {
                 console.error("Login failed:", error);
                 alert("Login failed. Please check your email and password and try again.");
             });
-        */
         
         // temporary dummy login for testing without API
+        /*
         setSessionToken(testProfileData.sessionToken ?? null!);
         setUserData(testProfileData.user);
         setCompanyData(testProfileData.company);
         router.push("/home");
-
+        */
     }
 
 
@@ -75,6 +80,8 @@ export default function LoginForm() {
             />
 
             <button className="btn btn-neutral mt-4" onClick={() => loginButtonHandler()}>Login</button>
+            <button className="btn btn-neutral mt-4" onClick={() => router.push("/register")}>Register</button>
+            <hr/>
             <button className="btn btn-neutral mt-4" onClick={() => router.push("/register")}>Register</button>
         </fieldset>
     )

@@ -36,12 +36,8 @@ export const RegistrationTokenAPI = {
 
 
     getTokenValues: async (token: string): Promise<RegistrationToken> => {
-        const response = await fetch(`${API}/auth/registration-tokens/token`, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ registrationToken: token }),
+        const response = await fetch(`${API}/auth/registration-tokens/${token}`, {
+            method: "GET",
         });
 
         if (!response.ok) throw new Error("Failed to fetch registration token");
@@ -51,7 +47,7 @@ export const RegistrationTokenAPI = {
 
     getTokenList: async (sessionToken: string): Promise<RegistrationToken[]> => {
         // This uses the companyID from the session token to fetch all registration tokens for that company
-        const response = await fetch(`${API}/auth/registration-tokens/token-list`, {
+        const response = await fetch(`${API}/auth/registration-tokens`, {
             method: "GET",
             headers: {
                 Authorization: `Bearer ${sessionToken}`
@@ -64,7 +60,7 @@ export const RegistrationTokenAPI = {
     },
 
     consumeToken: async (request: RegisterUserRequest): Promise<{ message: string }> => {
-        const response = await fetch(`${API}/auth/registration-tokens/consume`, {
+        const response = await fetch(`${API}/auth/register`, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json"
