@@ -221,7 +221,7 @@ Authenticates credentials (email is case-insensitive) and returns the JWT.
 ```json
 {
   "sessionToken": "jwt-string",
-  "expiresIn": 86400,
+  "expiresIn": "24 hours",
   "user": {
     "userId": "uuid",
     "firstName": "string",

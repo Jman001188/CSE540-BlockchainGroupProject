@@ -192,7 +192,7 @@ app.post('/auth/login', async (req, res) => {
             console.log("Login Successful!")
             res.json({
                 sessionToken: token,
-                expiresIn: 86400, // 24 hours in seconds
+                expiresIn: "24 hours", // 86400 - 24 hours in seconds
                 user: { 
                     userId: user.user_id, 
                     firstName: user.first_name, 
