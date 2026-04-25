@@ -1,105 +1,90 @@
 "use client";
-import { useContext, useEffect, useState } from "react";
-import { BatchData } from "../utils/types";
+
+import { useCallback, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import QRGenerator from "../global/QRGenerator";
 import { Context } from "../global/Context";
-import { tempAddNewBatch, tempIncreaseBatchIndex, tempTestbatchDataIndex, testBatchListData } from "@/app/tempData";
+import { BatchAPI } from "../utils/apiclient";
+import type { CreateBatchRequest } from "../utils/types/api-contract";
+import type { BatchModel } from "../utils/types/models";
 
 export default function RegisterBatch() {
-  const [ batchList, setBatchList ] = useState<BatchData[]>([]);
-  const [ selectedBatch, setSelectedBatch ] = useState<BatchData | null>(null); 
-  const [ viewSelect, setViewSelect ] = useState<"register" | "list">("register");
-  const [ itemNameInput, setItemNameInput ] = useState("");
-  const [ itemDescriptionInput, setItemDescriptionInput ] = useState("");
-  const { companyData, userData, sessionToken } = useContext(Context);
+  const [batchList, setBatchList] = useState<BatchModel[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState<BatchModel | null>(null);
+  const [viewSelect, setViewSelect] = useState<"register" | "list">("register");
+  const [itemNameInput, setItemNameInput] = useState("");
+  const [itemDescriptionInput, setItemDescriptionInput] = useState("");
+  const { sessionToken } = useContext(Context);
 
+  const router = useRouter();
 
-  const refreshBatchList = () => {
-    // Uncomment once the APIs are connected to the backend.
-    /*
+  const refreshBatchList = useCallback(() => {
+    if (!sessionToken) {
+      alert("You must be logged in to view batches.");
+      router.push("/login");
+      return;
+    }
+
     BatchAPI.getBatchList(sessionToken)
       .then((response) => {
         setBatchList(response);
       })
       .catch((error) => {
         console.error("Error fetching batch list:", error);
+        alert("Failed to fetch batch list.");
       });
-    */
+  }, [sessionToken, router]);
 
-    // Temp data assignment for testing the list and QR code generation without API
-    console.log(testBatchListData);
-    setBatchList(testBatchListData);
-  };
-
-
+  useEffect(() => {
+    if (!sessionToken) return;
+    refreshBatchList();
+  }, [sessionToken, refreshBatchList]);
 
   const handleRefreshBatchListClick = () => {
     refreshBatchList();
     setSelectedBatch(null);
-  }
-  
-  useEffect(() => { 
-    refreshBatchList();
-  }, []);
+  };
 
-  
   const clearFields = () => {
     setItemNameInput("");
     setItemDescriptionInput("");
-  }
+  };
 
   const submitItemBatch = () => {
+    if (!sessionToken) {
+      alert("You must be logged in to register a batch.");
+      router.push("/login");
+      return;
+    }
 
-    // Uncomment once the APIs are connected to the backend.
-    /* 
-    const requestData: CreateBatchRequest = {
-      batchName: itemNameInput,
-      batchDescription: itemDescriptionInput,
-    };  
+    const tempName = itemNameInput.trim();
+    const description = itemDescriptionInput.trim();
+    if (!tempName || !description) {
+      alert("Please enter an item name and description.");
+      return;
+    }
 
-    BatchAPI.registerBatch(sessionToken, requestData)
+    const apiPayload: CreateBatchRequest = {
+      batchName: tempName,
+      batchDescription: description,
+    };
+
+    BatchAPI.registerBatch(sessionToken, apiPayload)
       .then((response) => {
         alert("Batch registered successfully! Batch ID: " + response.batchId);
         clearFields();
+        refreshBatchList();
       })
       .catch((error) => {
         console.error("Error registering batch:", error);
         alert("Failed to register batch.");
       });
-
-    */
-
-    // Temp Code to add the new batch to the list without API connection. Remove once APIs are working.
-    tempAddNewBatch(
-      {
-        batchId: tempTestbatchDataIndex,
-        batchName: itemNameInput,
-        batchDescription: itemDescriptionInput,
-        createdAt: new Date().toISOString(),
-        registeringCompanyId: companyData?.companyId!,  
-        registeringCompanyName: companyData?.companyName!,
-        registeringUserId: userData?.userId!,
-        registeringUserName: userData?.firstName + " " + userData?.lastName,
-        blockchain: {
-          transactionId: "0x123456789abcdef",
-          status: "pending",
-          dataHash: "0xabcdef123456789"
-        }
-      }
-    );
-    tempIncreaseBatchIndex();
-
-    clearFields();
-    alert("Your item has been successfully registered! The item's registration number is 1234")
-    
-    // End Temp Code
-    
   };
 
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex justify-center pb-40">
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4 p-4 w-full max-w-lg mx-auto">
           <div className="flex flex-row gap-2">
             <button 
               className={`btn btn-sm ${viewSelect === 'register' ? 'selected-styles' : 'default-styles'}`}
@@ -154,7 +139,7 @@ export default function RegisterBatch() {
               }
               <button className="btn" onClick={handleRefreshBatchListClick}>Refresh List</button>
               {[...batchList]
-              .sort((a, b) => b.batchId - a.batchId)
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .map((item) => (
                 <div
                   key={item.batchId}
@@ -171,12 +156,12 @@ export default function RegisterBatch() {
                     Registered by {item.registeringUserName}
                   </div>
                   <div   className={`mt-1 text-sm ${
-                    item.blockchain.status === "registered"
+                    item.blockchain.status === "confirmed"
                       ? "text-green-600"
                       : item.blockchain.status === "pending"
                       ? "text-yellow-600"
-                      : item.blockchain.status === "transferred"
-                      ? "text-blue-600"
+                      : item.blockchain.status === "failed"
+                      ? "text-red-600"
                       : "text-gray-600"
                   }`}>
                     Status: {item.blockchain.status}
