@@ -61,6 +61,9 @@ export default function ReceiveBatch() {
   const visibleTransfers = sortedTransfers.filter(
     (item) => !filteredForUserTransfers || item.receivingUserId === userData?.userId
   );
+  const hasSelectedVisibleItem = selectedItem
+    ? visibleTransfers.some((item) => item.transferId === selectedItem.transferId)
+    : false;
 
   const handleSelectItem = (item: TransferModel) => {
     setSelectedItem(item);
@@ -191,8 +194,11 @@ export default function ReceiveBatch() {
                   ))}
                 </div>
               )}
+              {visibleTransfers.length === 0 && (
+                <p className="text-sm text-gray-600">No incoming transfers.</p>
+              )}
 
-              {selectedItem && (
+              {selectedItem && hasSelectedVisibleItem && (
                 <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4 mt-2">
                   <legend className="fieldset-legend">Selected transfer</legend>
                   <div className="space-y-1 mb-4">
