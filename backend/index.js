@@ -10,6 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
 const app = express();
 app.use(cors());
 app.use(express.json());
+const { ethers } = require('ethers');
 
 // Log a message on every connection
 app.use((req, res, next) => {
@@ -281,7 +282,7 @@ app.post('/batches', authenticateToken, async (req, res) => {
 app.get('/batches', authenticateToken, async (req, res) => {
     try {
         const sql = `
-            SELECT b.*, c.name as registering_company_name, u.first_name as registering_user_name 
+            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name 
             FROM batches b
             JOIN companies c ON b.company_id = c.company_id
             JOIN users u ON b.created_by = u.user_id
@@ -348,6 +349,12 @@ app.get('/batches/:batchId', async (req, res) => {
 // Initiate Transfer
 app.post('/transfers', authenticateToken, async (req, res) => {
     try {
+        // SECURITY CHECK: Ensure the sender's company actually owns this batch!
+        const batchQuery = await db.query("SELECT company_id FROM batches WHERE batch_id = $1", [req.body.batchId]);
+        if (batchQuery.rowCount === 0 || batchQuery.rows[0].company_id !== req.user.companyId) {
+            return res.status(403).json({ error: "Unauthorized: Your company does not own this batch." });
+        }
+
         const sql = `INSERT INTO transfers (batch_id, from_company_id, to_company_id, sender_user_id, receiving_user_id, status) 
                      VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING *`;
         const result = await db.query(sql, [
@@ -355,7 +362,7 @@ app.post('/transfers', authenticateToken, async (req, res) => {
             req.user.companyId, 
             req.body.toCompanyId, 
             req.user.userId,
-            req.body.receivingUserID
+            req.body.receivingUserId
         ]);
         
         const t = result.rows[0];
@@ -364,8 +371,8 @@ app.post('/transfers', authenticateToken, async (req, res) => {
             batchId: t.batch_id,
             fromCompanyId: t.from_company_id,
             toCompanyId: t.to_company_id,
-            senderUserID: t.sender_user_id,
-            receivingUserID: t.receiving_user_id,
+            senderUserId: t.sender_user_id,
+            receivingUserId: t.receiving_user_id,
             createdAt: t.created_at,
             status: t.status
         });
@@ -468,8 +475,15 @@ app.post('/transfers/:transferId/reject', authenticateToken, async (req, res) =>
 
 app.post('/company', async (req, res) => {
     try {
-        const sql = "INSERT INTO companies (name) VALUES ($1) RETURNING *";
-        const result = await db.query(sql, [req.body.name]);
+        const { name } = req.body;
+
+        const randomWallet = ethers.Wallet.createRandom();
+        const generatedWalletAddress = randomWallet.address;
+        const privateKey = randomWallet.privateKey; 
+        
+        const sql = "INSERT INTO companies (name, wallet_address) VALUES ($1, $2) RETURNING *";
+        const result = await db.query(sql, [name, generatedWalletAddress]);
+        
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error(err);
