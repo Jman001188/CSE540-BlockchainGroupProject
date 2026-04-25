@@ -1,110 +1,177 @@
 "use client";
+
 import { useRouter } from "next/navigation";
-import {useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Context } from "../global/Context";
+import DetailRow from "../global/DetailRow";
+import { UserAPI } from "../utils/apiclient";
+import type { Uuid } from "../utils/types/primitives";
 
-export default function LoginPage() {
-    const { userData, companyData } = useContext(Context);
+export default function UserProfile() {
+  const router = useRouter();
+  const { userData, companyData, sessionToken, setUserData } = useContext(Context);
 
-    const [ firstName, setFirstName ] = useState<string>(userData?.firstName ?? "");
-    const [ newFirstName, setNewFirstName ] = useState<string>(userData?.firstName ?? "");
-    const [ isEditingFirstName, setIsEditingFirstName ] = useState<boolean>(false);
+  const [firstName, setFirstName] = useState(userData?.firstName ?? "");
+  const [lastName, setLastName] = useState(userData?.lastName ?? "");
+  const [draftFirst, setDraftFirst] = useState(userData?.firstName ?? "");
+  const [draftLast, setDraftLast] = useState(userData?.lastName ?? "");
+  const [editingFirst, setEditingFirst] = useState(false);
+  const [editingLast, setEditingLast] = useState(false);
 
-    const [ lastName, setLastName ] = useState<string>(userData?.lastName ?? "");
-    const [ newLastName, setNewLastName ] = useState<string>(userData?.lastName ?? "");
-    const [ isEditingLastName, setIsEditingLastName ] = useState<boolean>(false);
+  useEffect(() => {
+    if (!userData) return;
+    setFirstName(userData.firstName);
+    setLastName(userData.lastName);
+    setDraftFirst(userData.firstName);
+    setDraftLast(userData.lastName);
+  }, [userData]);
 
-    const [ companyName, setCompanyName ] = useState<string>(companyData?.companyName ?? "");
-    const [ companyWallet, setCompanyWallet ] = useState<string>(companyData?.walletAddress ?? "");
+  const isDirty = useMemo(() => {
+    return draftFirst.trim() !== firstName.trim() || draftLast.trim() !== lastName.trim();
+  }, [draftFirst, draftLast, firstName, lastName]);
 
-    const changeProfileInformation = () => {
-        // API call to update profile information in backend
-        /* 
-
-        */
-
-        setFirstName(newFirstName);
-        setIsEditingFirstName(false);
-        setLastName(newLastName);
-        setIsEditingLastName(false);
+  const saveProfile = () => {
+    if (!sessionToken || !userData) {
+      alert("You must be logged in to save your profile.");
+      router.push("/login");
+      return;
+    }
+    const tempFirstName = draftFirst.trim();
+    const tempLastName = draftLast.trim();
+    if (!tempFirstName || !tempLastName) {
+      alert("First and last name are required.");
+      return;
     }
 
-    // I want the user to be able to click on their first or last name to edit it inline and then save the changes
-    // It's currently broken right now
-    // I also need to list the rest of the company data associated with the user.
-    return (
-        <div className="min-h-screen flex flex-col w-[500px] mx-auto items-center">
-            <h1>User Profile</h1>
-            {isEditingFirstName ?
-            <div className="flex flex-row w-full border-green-500" >
-                <label>First Name:</label>
-                <input 
-                    className="w-full p-2 border rounded border-gray-300 hover:border-blue-500 transition-colors"
-                    value={newFirstName}
-                    onChange={(e) => setNewFirstName(e.target.value)}
-                />
-                <p className="cursor-pointer text-red-500 hover:text-red-700 transition-colors" onClick={() => {setNewFirstName(firstName); setIsEditingFirstName(false)}}>X</p>
-            </div>
-            :
-            <div className="flex flex-col w-full" >
-                <label>First Name</label>
-                <p
-                    className="w-full p-2 border rounded border-gray-300 hover:border-blue-500 transition-colors cursor-pointer"
-                    onClick={() => setIsEditingFirstName(true)}
-                >
-                    {firstName || "Click to enter your first name"}
-                </p>
-            </div>
-            }
+    UserAPI.updateProfile(sessionToken, userData.userId as Uuid, {
+      firstName: tempFirstName,
+      lastName: tempLastName,
+    })
+      .then((res) => {
+        setUserData({
+          ...userData,
+          userId: res.user.userId,
+          firstName: res.user.firstName,
+          lastName: res.user.lastName,
+          role: res.user.role,
+        });
+        setFirstName(res.user.firstName);
+        setLastName(res.user.lastName);
+        setDraftFirst(res.user.firstName);
+        setDraftLast(res.user.lastName);
+        setEditingFirst(false);
+        setEditingLast(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Could not update profile.");
+      });
+  };
 
-            {isEditingLastName ?
-            <div className="flex flex-row w-full border-green-500" >
-                <label>Last Name:</label>
-                <input 
-                    className="w-full p-2 border rounded border-gray-300 hover:border-blue-500 transition-colors"
-                    value={newLastName}
-                    onChange={(e) => setNewLastName(e.target.value)}
-                />
-                <p className="cursor-pointer text-red-500 hover:text-red-700 transition-colors" onClick={() => {setNewLastName(lastName); setIsEditingLastName(false)}}>X</p>
-            </div>
-            :
-            <div className="flex flex-col w-full" >
-                <label >Last Name</label>
-                <div
-                    className="w-full p-2 border rounded border-gray-300 hover:border-blue-500 transition-colors cursor-pointer"
-                    onClick={() => setIsEditingLastName(true)}
-                >
-                    {lastName || "Click to enter your last name"}
+  const cancelEditFirst = () => {
+    setDraftFirst(firstName);
+    setEditingFirst(false);
+  };
 
-                </div>
-            </div>
-            }
+  const cancelEditLast = () => {
+    setDraftLast(lastName);
+    setEditingLast(false);
+  };
 
-            <div className="flex flex-row w-full mt-4">
-            <button 
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-                disabled={!isEditingFirstName && !isEditingLastName}
-                onClick={() => {
-                    changeProfileInformation();
-                }}
+  if (!userData) return null;
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex justify-center pb-40">
+        <div className="flex flex-col gap-4 p-4 w-full max-w-lg mx-auto">
+          <h1 className="text-2xl font-bold">User profile</h1>
+
+          <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
+            <legend className="fieldset-legend">Account</legend>
+            <DetailRow label="Email" value={userData.email} />
+            <DetailRow label="Role" value={userData.role} />
+            <DetailRow label="User ID" value={userData.userId} mono />
+
+            <div className="divider my-2" />
+
+            <p className="text-sm text-gray-600 mb-3">Click a name to edit. Save applies both fields.</p>
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <span className="label">First name</span>
+                {editingFirst ? (
+                  <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                    <input
+                      className="input input-bordered flex-1"
+                      value={draftFirst}
+                      onChange={(e) => setDraftFirst(e.target.value)}
+                      autoComplete="given-name"
+                    />
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={cancelEditFirst}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="input input-bordered w-full text-left cursor-pointer hover:border-primary/50"
+                    onClick={() => {
+                      setDraftFirst(firstName);
+                      setEditingFirst(true);
+                    }}
+                  >
+                    {firstName || "Add first name"}
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <span className="label">Last name</span>
+                {editingLast ? (
+                  <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                    <input
+                      className="input input-bordered flex-1"
+                      value={draftLast}
+                      onChange={(e) => setDraftLast(e.target.value)}
+                      autoComplete="family-name"
+                    />
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={cancelEditLast}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="input input-bordered w-full text-left cursor-pointer hover:border-primary/50"
+                    onClick={() => {
+                      setDraftLast(lastName);
+                      setEditingLast(true);
+                    }}
+                  >
+                    {lastName || "Add last name"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-neutral mt-4 w-full sm:w-auto"
+              disabled={!isDirty}
+              onClick={saveProfile}
             >
-                Save Changes
+              Save changes
             </button>
-            </div>
+          </fieldset>
 
-            <div className="flex items-center text-gray-500 my-4">
-            <hr className="flex-grow border-t border-gray-300" />
-            <span className="mx-3 text-sm">Company Information</span>
-            <hr className="flex-grow border-t border-gray-300" />
-            </div>
-
-            <div className="flex flex-col w-full" > 
-                <label>Company Name: {companyName}</label>
-                <label>Company Wallet: {companyWallet}</label>
-
-            </div>
-            
-
+          <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
+            <legend className="fieldset-legend">Company</legend>
+            <DetailRow label="Company name" value={companyData?.companyName ?? "—"} />
+            <DetailRow label="Company ID" value={companyData?.companyId ?? "—"} mono />
+            <DetailRow label="Wallet address" value={companyData?.walletAddress ?? "—"} mono />
+          </fieldset>
         </div>
-    );
+      </div>
+    </div>
+  );
 }
