@@ -1,12 +1,12 @@
-# 🌾 Honest Harvest API Documentation
+# Honest Harvest API Documentation
 
 **Base URL:** `http://localhost:8080`
 
-
+All endpoints accept and return JSON.
 
 ---
 
-## 🔑 Session Token
+## Session Token
 
 All authenticated endpoints require the JWT Session Token in the headers as: `Authorization: Bearer <your_token>`.
 
@@ -20,8 +20,8 @@ All authenticated endpoints require the JWT Session Token in the headers as: `Au
 **Internal Contents**
 ```json
 {
-  "userId": number,
-  "companyId": number,
+  "userId": "uuid",
+  "companyId": "uuid",
   "role": "user | manager",
   "iat": number,
   "exp": number
@@ -30,7 +30,7 @@ All authenticated endpoints require the JWT Session Token in the headers as: `Au
 
 ---
 
-## 🔐 1. Users & Authentication
+## 1. Users & Authentication
 
 ---
 
@@ -65,7 +65,7 @@ Authorization: Bearer <sessionToken>
 **Response (201)**
 ```json
 {
-  "registrationTokenId": number,
+  "registrationTokenId": "uuid",
   "registrationToken": string
 }
 ```
@@ -89,7 +89,7 @@ Authorization: Bearer <sessionToken>
 **Response (200)**
 ```json
 {
-  "registrationTokenId": number,
+  "registrationTokenId": "uuid",
   "status": "revoked"
 }
 ```
@@ -112,17 +112,17 @@ Authorization: Bearer <sessionToken>
 ```json
 [
   {
-	tokenId: number,
-	"registrationToken": string,
-    "userId": number,
+    "tokenId": "uuid",
+    "registrationToken": string,
+    "userId": "uuid",
     "email": string,
-    "companyId": number,
+    "companyId": "uuid",
     "companyName": string,
     "role": "user | manager",
     "status": "pending | used | revoked",
-	"createdAt": string"
-	"createdById": number,
-	"createdByName" : string
+    "createdAt": string,
+    "createdById": "uuid",
+    "createdByName": string
   }
 ]
 ```
@@ -150,17 +150,17 @@ Returns information tied to a registration token for pre-filling user registrati
 **Response (200)**
 ```json
 {
-tokenId: number,
-"registrationToken": string,
-"userId": number,
-"email": string,
-"companyId": number,
-"companyName": string,
-"role": "user | manager",
-"status": "pending | used | revoked",
-"createdAt": string"
-"createdById": number,
-"createdByName" : string
+  "tokenId": "uuid",
+  "registrationToken": string,
+  "userId": "uuid",
+  "email": string,
+  "companyId": "uuid",
+  "companyName": string,
+  "role": "user | manager",
+  "status": "pending | used | revoked",
+  "createdAt": string,
+  "createdById": "uuid",
+  "createdByName": string
 }
 ```
 
@@ -202,6 +202,7 @@ Consumes a registration token and creates a new user account.
 Authenticates user credentials and returns a session token.
 
 * **Endpoint:** `POST /auth/login`
+* **Auth Required:** No
 
 #### Internal Behavior
 - Verifies credentials
@@ -225,16 +226,16 @@ Authenticates user credentials and returns a session token.
   "sessionToken": "<JWT Token>",
   "expiresIn": number,
   "user": {
-    "userId": number,
+    "userId": "uuid",
     "firstName": string,
     "lastName": string,
-	  "email": string,
-    "role": "user | manager",
+    "email": string,
+    "role": "user | manager"
   },
   "company": {
-    "companyId": number,
+    "companyId": "uuid",
     "companyName": string,
-	  "walletAddress": string,
+    "walletAddress": string
   }
 }
 ```
@@ -266,7 +267,7 @@ Authorization: Bearer <sessionToken>
 ```json
 {
   "user": {
-    "userId": number,
+    "userId": "uuid",
     "firstName": string,
     "lastName": string,
     "role": "user | manager"
@@ -311,12 +312,12 @@ Authorization: Bearer <sessionToken>
 **Response (201)**
 ```json
 {
-  "batchId": number,
+  "batchId": "uuid",
   "batchName": string,
   "batchDescription": string,
   "createdAt": string,
   "blockchain": {
-    "transactionId": number,
+    "transactionId": "uuid",
     "status": "pending | confirmed | failed"
   }
 }
@@ -341,16 +342,16 @@ Authorization: Bearer <sessionToken>
 ```json
 [
 	{
-	  "batchId": number,
+	  "batchId": "uuid",
 	  "batchName": string,
 	  "batchDescription": string,
 	  "createdAt": string,
-	  "registeringCompanyId": number,
+	  "registeringCompanyId": "uuid",
 	  "registeringCompanyName": string,
-	  "registeringUserId": number,
+	  "registeringUserId": "uuid",
 	  "registeringUserName": string,
 	  "blockchain": {
-		"transactionId": number,
+		"transactionId": "uuid",
 		"status": "pending | confirmed | failed",
 		"dataHash": string
 	  }
@@ -373,16 +374,16 @@ Retrieves detailed information for a specific batch.
 **Response (200)**
 ```json
 {
-  "batchId": number,
+  "batchId": "uuid",
   "batchName": string,
   "batchDescription": string,
   "createdAt": string,
-  "registeringCompanyId": number,
+  "registeringCompanyId": "uuid",
   "registeringCompanyName": string,
-  "registeringUserId": number,
+  "registeringUserId": "uuid",
   "registeringUserName": string,
   "blockchain": {
-	"transactionId": number,
+	"transactionId": "uuid",
 	"status": "pending | confirmed | failed",
 	"dataHash": string
   }
@@ -410,21 +411,21 @@ the userID is used for destination filtering, but anyone in the company can acce
 Authorization: Bearer <sessionToken>
 ```json
 {
-  "batchId": number,
-  "toCompanyId": number,
-  "receivingUserID": number
+  "batchId": "uuid",
+  "toCompanyId": "uuid",
+  "receivingUserID": "uuid"
 }
 ```
 
 **Response (201)**
 ```json
 {
-  "transferId": number,
-  "batchId": number,
-  "fromCompanyId": number,
-  "toCompanyId": number,
-  "senderUserID": number,
-  "receivingUserID": number,
+  "transferId": "uuid",
+  "batchId": "uuid",
+  "fromCompanyId": "uuid",
+  "toCompanyId": "uuid",
+  "senderUserID": "uuid",
+  "receivingUserID": "uuid",
   "createdAt": string,
   "status": "pending approval | approved | rejected | transfer complete | transfer failed"
 }
@@ -433,11 +434,9 @@ Authorization: Bearer <sessionToken>
 ---
 
 ### Get Transfer List
-Creates a pending transfer request to move a batch to another company.
-The receiving user provides their companyID and their userID. 
-the userID is used for destination filtering, but anyone in the company can accept/reject.
+Retrieves transfers where the authenticated user's company is the sender or receiver.
 
-* **Endpoint:** `POST /transfers`
+* **Endpoint:** `GET /transfers`
 * **Auth Required:** Yes
 
 #### Internal Behavior
@@ -451,15 +450,15 @@ Authorization: Bearer <sessionToken>
 ```json
 [
   {
-    "transferId": number,
-    "batchId": number,
-	  "batchName": string,
+    "transferId": "uuid",
+    "batchId": "uuid",
+    "batchName": string,
     "fromCompanyName": string,
     "toCompanyName": string,
-    "senderUserId": number,
-	  "senderUserName": string,
-    "receivingUserId": number,
-	  "receivingUserName": string,
+    "senderUserId": "uuid",
+    "senderUserName": string,
+    "receivingUserId": "uuid",
+    "receivingUserName": string,
     "status": "pending approval | approved | rejected | transfer complete | transfer failed",
     "createdAt": string
   }

@@ -61,6 +61,7 @@ export default function UserProfile() {
         setDraftLast(res.user.lastName);
         setEditingFirst(false);
         setEditingLast(false);
+        alert("Profile updated successfully.");
       })
       .catch((err) => {
         console.error(err);

@@ -58,6 +58,9 @@ export default function ReceiveBatch() {
   const sortedTransfers = [...pendingTransfers].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+  const visibleTransfers = sortedTransfers.filter(
+    (item) => !filteredForUserTransfers || item.receivingUserId === userData?.userId
+  );
 
   const handleSelectItem = (item: TransferModel) => {
     setSelectedItem(item);
@@ -144,9 +147,9 @@ export default function ReceiveBatch() {
                 Only show transfers where I am the listed recipient
               </label>
 
-              <div className="flex flex-col gap-3">
-                {sortedTransfers.map((item) =>
-                  filteredForUserTransfers && item.receivingUserId !== userData?.userId ? null : (
+              {visibleTransfers.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {visibleTransfers.map((item) => (
                     <button
                       type="button"
                       key={item.transferId}
@@ -185,9 +188,9 @@ export default function ReceiveBatch() {
                         )}
                       </div>
                     </button>
-                  )
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {selectedItem && (
                 <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4 mt-2">
