@@ -5,6 +5,7 @@ import QRFile from "../../global/QRFile";
 import DetailRow from "../../global/DetailRow";
 import type { BatchQrModel, RecipientQrModel } from "../../utils/types/models";
 
+// Passed states from the SendBatchPage component
 type Props = {
   currentStepForSending: string;
   setCurrentStepForSending: React.Dispatch<React.SetStateAction<string>>;
@@ -40,6 +41,8 @@ export default function SendBatchComponent({
   handleItemScan,
   triggerItemTransfer,
 }: Props) {
+
+  // Item summary JSX element
   const itemSummary = processedItemData && (
     <div className="mt-4 space-y-1">
       <DetailRow label="Batch ID" value={processedItemData.batchId} mono />

@@ -1,3 +1,5 @@
+// This file contains the basic types for the frontend to use
+
 export type Uuid = string;
 
 export type ISODateString = string;

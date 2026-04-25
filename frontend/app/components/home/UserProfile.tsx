@@ -18,6 +18,7 @@ export default function UserProfile() {
   const [editingFirst, setEditingFirst] = useState(false);
   const [editingLast, setEditingLast] = useState(false);
 
+  // sets the initial values of the first and last name
   useEffect(() => {
     if (!userData) return;
     setFirstName(userData.firstName);
@@ -26,10 +27,12 @@ export default function UserProfile() {
     setDraftLast(userData.lastName);
   }, [userData]);
 
-  const isDirty = useMemo(() => {
+  // Checks if the user's profile data has been edited
+  const hasChangedData = useMemo(() => {
     return draftFirst.trim() !== firstName.trim() || draftLast.trim() !== lastName.trim();
   }, [draftFirst, draftLast, firstName, lastName]);
 
+  // Triggers the update of the user's profile
   const saveProfile = () => {
     if (!sessionToken || !userData) {
       alert("You must be logged in to save your profile.");
@@ -43,10 +46,7 @@ export default function UserProfile() {
       return;
     }
 
-    UserAPI.updateProfile(sessionToken, userData.userId as Uuid, {
-      firstName: tempFirstName,
-      lastName: tempLastName,
-    })
+    UserAPI.updateProfile(sessionToken, userData.userId, { firstName: tempFirstName,lastName: tempLastName, })
       .then((res) => {
         setUserData({
           ...userData,
@@ -69,17 +69,17 @@ export default function UserProfile() {
       });
   };
 
+  // Cancels the edit of the first name
   const cancelEditFirst = () => {
     setDraftFirst(firstName);
     setEditingFirst(false);
   };
 
+  // Cancels the edit of the last name
   const cancelEditLast = () => {
     setDraftLast(lastName);
     setEditingLast(false);
   };
-
-  if (!userData) return null;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -89,9 +89,9 @@ export default function UserProfile() {
 
           <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
             <legend className="fieldset-legend">Account</legend>
-            <DetailRow label="Email" value={userData.email} />
-            <DetailRow label="Role" value={userData.role} />
-            <DetailRow label="User ID" value={userData.userId} mono />
+            <DetailRow label="Email" value={userData?.email ?? ""} />
+            <DetailRow label="Role" value={userData?.role ?? ""} />
+            <DetailRow label="User ID" value={userData?.userId ?? ""} mono />
 
             <div className="divider my-2" />
 
@@ -158,7 +158,7 @@ export default function UserProfile() {
             <button
               type="button"
               className="btn btn-neutral mt-4 w-full sm:w-auto"
-              disabled={!isDirty}
+              disabled={!hasChangedData}
               onClick={saveProfile}
             >
               Save changes

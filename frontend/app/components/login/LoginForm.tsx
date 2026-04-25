@@ -38,6 +38,7 @@ export default function LoginForm() {
             });
     };
 
+    // Redirect to home if already logged in
     useEffect(() => {
         if(sessionToken) {
             console.log("Already logged in, redirecting to home.");

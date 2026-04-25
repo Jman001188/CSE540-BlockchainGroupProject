@@ -20,12 +20,15 @@ export default function RegisterForm() {
   const { sessionToken } = useContext(Context);
   const router = useRouter();
 
+  // Redirect to home if already logged in
+  // Checks every time the sessionToken changes
   useEffect(() => {
     if (sessionToken) {
       router.replace("/home");
     }
   }, [sessionToken, router]);
 
+  // Verify all required fields are filled out and filled correctly
   const verifyRequiredFields = () => {
     if (
       registrationToken.trim() === "" ||
@@ -47,6 +50,7 @@ export default function RegisterForm() {
     return true;
   };
 
+  // checks if all required fields are filled out and filled correctly before submission
   const canSubmitRegistration =
     registrationToken.trim() !== "" &&
     email.trim() !== "" &&
@@ -56,6 +60,7 @@ export default function RegisterForm() {
     lastName.trim() !== "" &&
     password === confirmPassword;
 
+  // sends the enetered reg token to the backend to get the token values
   const submitRegistrationToken = () => {
     const code = registrationToken.trim();
     if (!code) {
@@ -77,6 +82,7 @@ export default function RegisterForm() {
       });
   };
 
+  // clears all fields
   const clearFields = () => {
     setRegistrationToken("");
     setEmail("");
@@ -89,6 +95,7 @@ export default function RegisterForm() {
     setInvitedRole("");
   };
 
+  // sends the data to the backend to register the user
   const registerUserButton = () => {
     if (!verifyRequiredFields()) return;
 

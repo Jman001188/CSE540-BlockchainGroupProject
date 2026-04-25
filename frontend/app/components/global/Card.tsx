@@ -6,7 +6,7 @@ interface CardProps {
   action: string;
   route: string;
 }
-
+// Displays a card with an action and a route
 export default function Card({ action, route }: CardProps) {
   const router = useRouter();
 

@@ -18,6 +18,7 @@ export default function RegisterBatch() {
 
   const router = useRouter();
 
+  // Refreshes the batch list
   const refreshBatchList = useCallback(() => {
     if (!sessionToken) {
       alert("You must be logged in to view batches.");
@@ -35,21 +36,25 @@ export default function RegisterBatch() {
       });
   }, [sessionToken, router]);
 
+  // Refreshes the batch list when the sessionToken changes and upon loading the page
   useEffect(() => {
     if (!sessionToken) return;
     refreshBatchList();
   }, [sessionToken, refreshBatchList]);
 
+  // Refreshes the batch list when the refresh button is clicked
   const handleRefreshBatchListClick = () => {
     refreshBatchList();
     setSelectedBatch(null);
   };
 
+  // Clears the item name and description fields
   const clearFields = () => {
     setItemNameInput("");
     setItemDescriptionInput("");
   };
 
+  // Submits the item batch to the backend
   const submitItemBatch = () => {
     if (!sessionToken) {
       alert("You must be logged in to register a batch.");

@@ -1,3 +1,5 @@
+// This file contains the API object types for the frontend to use
+
 import type {
   BatchBlockchainStatus,
   ISODateString,

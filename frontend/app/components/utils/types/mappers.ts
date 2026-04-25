@@ -1,3 +1,5 @@
+// This file contains the functions to normalize the data from the backend to the frontend
+
 import type {
   CreateRegistrationTokenResponse,
   CompanyRowSnake,

@@ -6,6 +6,7 @@ type DetailRowProps = {
   mono?: boolean;
 };
 
+// Displays a label and value pair
 export default function DetailRow({ label, value, mono = false }: DetailRowProps) {
   return (
     <div className="mb-3">

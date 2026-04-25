@@ -11,6 +11,7 @@ type Props = {
 export default function ViewTransfersComponent({ transferList, refreshTransferList }: Props) {
   const isActiveStatus = (status: TransferModel["status"]) => status === "pending" || status === "accepted";
 
+  // Status enumerator for the transfer list
   const getStatusClassName = (status: TransferModel["status"]) => {
     if (status === "completed") return "text-green-600";
     if (status === "accepted") return "text-blue-600";
@@ -19,6 +20,7 @@ export default function ViewTransfersComponent({ transferList, refreshTransferLi
     return "text-gray-600";
   };
 
+  // Sorts the transfer list by creation date
   const sorted = [...transferList].sort((a, b) => {
     const aIsActive = isActiveStatus(a.status);
     const bIsActive = isActiveStatus(b.status);

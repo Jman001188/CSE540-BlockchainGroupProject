@@ -1,3 +1,5 @@
+// THis files contains all basic object models for the frontend to use
+
 import type {
   BatchBlockchainStatus,
   ISODateString,

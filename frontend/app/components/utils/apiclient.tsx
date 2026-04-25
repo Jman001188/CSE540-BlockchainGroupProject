@@ -30,6 +30,7 @@ import type { BatchModel, CompanyModel, RegistrationTokenModel, TransferModel } 
 const API = "http://localhost:8080";
 
 export const RegistrationTokenAPI = {
+    // Create a new registration token for a user
     generateToken: async (sessionToken: string, request: CreateRegistrationTokenRequest): Promise<CreateRegistrationTokenResponse> => {
         const response = await fetch(`${API}/auth/registration-tokens`, {
             method: "POST",
@@ -45,6 +46,7 @@ export const RegistrationTokenAPI = {
         return normalizeCreateRegistrationTokenResponse(await response.json());
     },
 
+    // Revoke a registration token
     revokeToken: async (sessionToken: string, tokenId: Uuid): Promise<RevokeRegistrationTokenResponse> => {
         const response = await fetch(`${API}/auth/registration-tokens/${tokenId}/revoke`, {
             method: "POST",
@@ -59,7 +61,7 @@ export const RegistrationTokenAPI = {
         return normalizeRevokeTokenResponse(await response.json());
     },
 
-
+    // Get the values of a registration token
     getTokenValues: async (token: string): Promise<RegistrationTokenModel> => {
         const response = await fetch(`${API}/auth/registration-tokens/token`, {
             method: "POST",
@@ -72,6 +74,7 @@ export const RegistrationTokenAPI = {
         return response.json();
     },
 
+    // Get the list of registration tokens for a company
     getTokenList: async (sessionToken: string): Promise<RegistrationTokenModel[]> => {
         const response = await fetch(`${API}/auth/registration-tokens/token-list`, {
             method: "GET",
@@ -85,6 +88,7 @@ export const RegistrationTokenAPI = {
         return (await response.json()) as RegistrationTokenModel[];
     },
 
+    // Consume a registration token to create a new user
     consumeToken: async (request: RegisterUserRequest): Promise<MessageResponse> => {
         const response = await fetch(`${API}/auth/register`, {
             method: "POST",
@@ -98,6 +102,7 @@ export const RegistrationTokenAPI = {
         return response.json();
     },
 
+    // Create a new company
     createCompany: async (companyName: string): Promise<CompanyModel> => {
         const response = await fetch(`${API}/company`, {
             method: "POST",
@@ -113,6 +118,7 @@ export const RegistrationTokenAPI = {
         return normalizeCompany(row as CompanyRowSnake);
     },
 
+    // Get the list of all companies
     getAllCompanies: async (): Promise<CompanyModel[]> => {
         const response = await fetch(`${API}/companies`, {
             method: "GET",
@@ -124,6 +130,7 @@ export const RegistrationTokenAPI = {
         return rows.map((row) => normalizeCompany(row));
     },
     
+    // Create a new company admin token
     createCompanyAdminToken: async (request: CreateCompanyAdminTokenRequest): Promise<CreateRegistrationTokenResponse> => {
         const response = await fetch(`${API}/auth/admin/manager-token`, {
             method: "POST",
@@ -141,6 +148,7 @@ export const RegistrationTokenAPI = {
 };
 
 export const AuthAPI = {
+    // Login a user
     login: async (request: LoginRequest): Promise<LoginResponse> => {
         const response = await fetch(`${API}/auth/login`, {
             method: "POST",
@@ -157,6 +165,7 @@ export const AuthAPI = {
 };
 
 export const UserAPI = {
+    // Update a user's profile
     updateProfile: async (sessionToken: string, userId: Uuid, body: UpdateUserProfileRequest): Promise<UpdateUserProfileResponse> => {
         const response = await fetch(`${API}/users/${userId}`, {
             method: "PATCH",
@@ -173,6 +182,7 @@ export const UserAPI = {
 };
 
 export const CompanyAPI = {
+    // Update a company's profile - NOT YET IMPLEMENTED ON THE BACKEND
     updateCompany: async (
         sessionToken: string,
         companyId: Uuid,
@@ -194,6 +204,7 @@ export const CompanyAPI = {
 };
 
 export const BatchAPI = {
+    // Register a new batch
     registerBatch: async (sessionToken: string, request: CreateBatchRequest): Promise<CreateBatchResponse> => {
         const response = await fetch(`${API}/batches`, {
             method: "POST",
@@ -209,6 +220,7 @@ export const BatchAPI = {
         return response.json();
     },
 
+    // Get the list of all batches
     getBatchList: async (sessionToken: string): Promise<BatchListResponse> => {
         const response = await fetch(`${API}/batches`, {
             method: "GET",
@@ -223,6 +235,7 @@ export const BatchAPI = {
 
     },
 
+    // Get a batch by its ID
     getBatchById: async (id: Uuid): Promise<BatchModel> => {
         const response = await fetch(`${API}/batches/${id}`, {
             method: "GET"
@@ -236,6 +249,7 @@ export const BatchAPI = {
 };
 
 export const TransferBatchAPI = {
+    // Initiate a new transfer
     initiateTransfer: async (sessionToken: string, request: CreateTransferRequest): Promise<CreateTransferResponse> => {
         const response = await fetch(`${API}/transfers`, {
             method: "POST",
@@ -251,6 +265,7 @@ export const TransferBatchAPI = {
         return response.json();
     },
 
+    // Get the list of all transfers
     getTransferList: async (sessionToken: string): Promise<TransferModel[]> => {
         const response = await fetch(`${API}/transfers`, {
             method: "GET",
@@ -264,6 +279,7 @@ export const TransferBatchAPI = {
         return normalizeTransferList(await response.json());
     },
 
+    // Accept a transfer
     acceptTransfer: async (sessionToken: string, transferId: Uuid): Promise<MessageResponse> => {
         const response = await fetch(`${API}/transfers/${transferId}/complete`, {
             method: "POST",
@@ -277,6 +293,7 @@ export const TransferBatchAPI = {
         return response.json();
     },
 
+    // Reject a transfer
     rejectTransfer: async (sessionToken: string, transferId: Uuid): Promise<MessageResponse> => {
         const response = await fetch(`${API}/transfers/${transferId}/reject`, {
             method: "POST",

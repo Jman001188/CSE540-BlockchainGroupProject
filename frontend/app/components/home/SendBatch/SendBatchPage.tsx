@@ -23,7 +23,8 @@ export default function SendBatchPage() {
   const { sessionToken } = useContext(Context);
   const router = useRouter();
 
-  const resetSendFlow = () => {
+  // Resets the fields for the send batch flow
+  const resetFields = () => {
     setHasItemQrValue(false);
     setHasRecipientQrValue(false);
     setProcessedItemData(null);
@@ -32,6 +33,7 @@ export default function SendBatchPage() {
     setCurrentStepForSending("scanItem");
   };
 
+  // Refreshes the transfer list
   const refreshTransferList = useCallback(() => {
     if (!sessionToken) {
       alert("You must be logged in to view transfers.");
@@ -49,6 +51,7 @@ export default function SendBatchPage() {
       });
   }, [sessionToken, router]);
 
+  // Handles the item QR scan
   const handleItemScan = (result: string) => {
     if (!result.trim()) return;
     try {
@@ -66,6 +69,7 @@ export default function SendBatchPage() {
     }
   };
 
+  // Handles the recipient QR scan
   const handleRecipientScan = (result: string) => {
     if (!result.trim()) return;
     try {
@@ -81,6 +85,7 @@ export default function SendBatchPage() {
     }
   };
 
+  // Triggers the item transfer in the backend
   const triggerItemTransfer = () => {
     if (!sessionToken) {
       alert("You must be logged in to send a batch.");
@@ -107,7 +112,7 @@ export default function SendBatchPage() {
     TransferBatchAPI.initiateTransfer(sessionToken, apiPayload)
       .then((response) => {
         alert(`Transfer created. Transfer ID: ${response.transferId}`);
-        resetSendFlow();
+        resetFields();
         refreshTransferList();
       })
       .catch((error) => {

@@ -20,16 +20,19 @@ export default function CompanyProfile() {
 
   const isManager = userData?.role === "manager";
 
+  // Sets the initial company name
   useEffect(() => {
     if (!companyData) return;
     setCompanyName(companyData.companyName);
   }, [companyData]);
 
+  // Checks if the company name has been changed
   const hasCompanyChanges = useMemo(() => {
     if (!companyData) return false;
     return companyName.trim() !== companyData.companyName.trim();
   }, [companyName, companyData]);
 
+  // Saves the company profile to the backend
   const saveCompanyProfile = () => {
     if (!sessionToken || !companyData) {
       alert("You must be logged in.");
@@ -60,11 +63,13 @@ export default function CompanyProfile() {
       });
   };
 
+  // Clears the registration data
   const clearRegistrationData = () => {
     setNewUserRole("user");
     setNewUserEmail("");
   };
 
+  // Gets the updated token list from the backend
   const getUpdatedTokenList = () => {
     if (!sessionToken) {
       router.push("/login");
@@ -80,6 +85,7 @@ export default function CompanyProfile() {
       });
   };
 
+  // Handles the new user view button
   const handleNewUserViewButton = () => {
     if (!sessionToken) {
       alert("You must be logged in.");
@@ -94,6 +100,7 @@ export default function CompanyProfile() {
     setViewSelect("userRegistration");
   };
 
+  // Requests a new user token from the backend
   const requestNewUserTokenButton = () => {
     if (!sessionToken) return;
     const email = newUserEmail.trim();
@@ -113,6 +120,7 @@ export default function CompanyProfile() {
       });
   };
 
+  // Revokes a user token from the backend
   const revokeToken = (token: RegistrationTokenModel) => {
     if (!sessionToken) return;
     RegistrationTokenAPI.revokeToken(sessionToken, token.tokenId)

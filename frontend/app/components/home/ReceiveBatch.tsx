@@ -21,6 +21,7 @@ export default function ReceiveBatch() {
 
   const router = useRouter();
 
+  // Refreshes the pending transfer list
   const handleRefreshPendingList = useCallback(() => {
     if (!sessionToken) {
       alert("You must be logged in to view transfers.");
@@ -38,11 +39,13 @@ export default function ReceiveBatch() {
       });
   }, [sessionToken, router]);
 
+  // Refreshes the pending transfer list when the sessionToken changes and upon loading the page
   useEffect(() => {
     if (!sessionToken) return;
     handleRefreshPendingList();
   }, [sessionToken, handleRefreshPendingList]);
 
+  // Sets the recipient data
   useEffect(() => {
     if (!userData || !companyData) return;
     setRecipientData({
@@ -55,12 +58,17 @@ export default function ReceiveBatch() {
     });
   }, [userData, companyData]);
 
+  // Sorts the pending transfers by creation date
   const sortedTransfers = [...pendingTransfers].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+
+  // Filters the pending transfers by the user
   const visibleTransfers = sortedTransfers.filter(
     (item) => !filteredForUserTransfers || item.receivingUserId === userData?.userId
   );
+
+  // Checks if a transfer is selected
   const hasSelectedVisibleItem = selectedItem
     ? visibleTransfers.some((item) => item.transferId === selectedItem.transferId)
     : false;
@@ -69,6 +77,7 @@ export default function ReceiveBatch() {
     setSelectedItem(item);
   };
 
+  // Accepts a transfer in the backend
   const acceptBatch = (item: TransferModel) => {
     if (!sessionToken) {
       router.replace("/login");
@@ -86,6 +95,7 @@ export default function ReceiveBatch() {
       });
   };
 
+  // Rejects a transfer in the backend
   const rejectBatch = (item: TransferModel) => {
     if (!sessionToken) {
       router.replace("/login");
