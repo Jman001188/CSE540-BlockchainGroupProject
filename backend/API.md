@@ -299,8 +299,9 @@ Introduces a product lot and prepares blockchain interaction.
   "batchDescription": "string",
   "createdAt": "timestamp",
   "blockchain": {
-    "transactionId": null,
-    "status": "pending"
+    "transactionId": "tx-hash-string",
+    "status": "confirmed",
+    "ipfsHash": "IpfsHashHere..."
   }
 }
 ```

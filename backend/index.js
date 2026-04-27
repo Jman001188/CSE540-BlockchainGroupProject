@@ -1,7 +1,7 @@
 ﻿const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto'); // Used for generating secure registration tokens
+const crypto = require('crypto'); 
 const jwt = require('jsonwebtoken'); 
 const db = require('./db'); 
 require('dotenv').config();
@@ -12,15 +12,18 @@ app.use(cors());
 app.use(express.json());
 const { ethers } = require('ethers');
 const axios = require('axios');
-const { ethers } = require('ethers');
+let contractABI;
+let contractAddress;
 
-// You will get this from your Solidity developer when they compile the contract!
-// It tells ethers.js exactly what functions exist on the contract.
-const contractABI = [
-    "function registerItem(uint256 itemID, string dataHash) external",
-    "function transferOwnership(uint256 itemID, address newOwner) external",
-    "function getItem(uint256 itemID) external view returns (uint256, address, string)"
-];
+try {
+    contractABI = require('../abi/SupplyChainContract.json');
+    const deployedData = require('../deployments/deployed-address.json');
+    contractAddress = deployedData.address;
+    
+    console.log(`✅ Smart Contract loaded automatically! Address: ${contractAddress}`);
+} catch (err) {
+    console.warn("⚠️ Warning: Smart contract files not found. Did you run the Hardhat deployment script?");
+}
 
 // Log a message on every connection
 app.use((req, res, next) => {
@@ -260,7 +263,7 @@ app.patch('/users/:userId', authenticateToken, async (req, res) => {
 // --- 3. CORE SUPPLY CHAIN & TRANSFERS ---
 
 // Register a New Batch
-// Register a New Batch (DB + IPFS + Blockchain)
+// (DB + IPFS + Blockchain)
 app.post('/batches', authenticateToken, async (req, res) => {
     try {
         const { batchName, batchDescription } = req.body;
@@ -272,7 +275,6 @@ app.post('/batches', authenticateToken, async (req, res) => {
         const batch = dbResult.rows[0];
 
         // --- STEP 2: Upload Metadata to IPFS via Pinata ---
-        // We hash the actual descriptive data to keep it off the blockchain
         const ipfsPayload = {
             name: batchName,
             description: batchDescription,
@@ -287,13 +289,13 @@ app.post('/batches', authenticateToken, async (req, res) => {
             }
         });
         
-        const ipfsCID = pinataResponse.data.IpfsHash; // This is your 'dataHash' string!
+        const ipfsCID = pinataResponse.data.IpfsHash; //'dataHash' string!
 
         // --- STEP 3: Register on Smart Contract ---
         // Setup Ethers connection
         const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         const wallet = new ethers.Wallet(process.env.COMPANY_PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, wallet);
+        const contract = new ethers.Contract(contractAddress, contractABI, wallet);
 
         // Call the contract (Passing the DB batch_id and the IPFS string)
         const tx = await contract.registerItem(batch.batch_id, ipfsCID);
@@ -308,7 +310,6 @@ app.post('/batches', authenticateToken, async (req, res) => {
         const finalResult = await db.query(updateSql, [receipt.hash, ipfsCID, batch.batch_id]);
         const finalBatch = finalResult.rows[0];
 
-        // --- STEP 5: Return Success to Frontend ---
         res.status(201).json({
             batchId: finalBatch.batch_id,
             batchName: finalBatch.batch_name,
@@ -317,7 +318,7 @@ app.post('/batches', authenticateToken, async (req, res) => {
             blockchain: {
                 transactionId: finalBatch.blockchain_tx_id,
                 status: finalBatch.blockchain_status,
-                ipfsHash: finalBatch.data_hash // The frontend can use this to fetch data from IPFS!
+                ipfsHash: finalBatch.data_hash
             }
         });
 
