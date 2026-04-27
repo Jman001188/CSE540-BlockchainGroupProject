@@ -1,74 +1,81 @@
 "use client";
 
-import { PendingTransferData } from "../../utils/types";
+import DetailRow from "../../global/DetailRow";
+import type { TransferModel } from "../../utils/types/models";
 
 type Props = {
-  testTransferListData: PendingTransferData[];
-  transferList: PendingTransferData[];
+  transferList: TransferModel[];
   refreshTransferList: () => void;
-  cancelBatch: (transferId: number) => void;
 };
 
-export default function ViewTransfersComponent(props: Props) {
-  return (
-    <>
-      <button className="btn" onClick={props.refreshTransferList}>
-        Refresh List
-      </button>
+export default function ViewTransfersComponent({ transferList, refreshTransferList }: Props) {
+  const isActiveStatus = (status: TransferModel["status"]) => status === "pending" || status === "accepted";
 
-      {props.transferList
-        .sort((a, b) => b.transferId - a.transferId)
-        .map((transferRequest) => (
+  // Status enumerator for the transfer list
+  const getStatusClassName = (status: TransferModel["status"]) => {
+    if (status === "completed") return "text-green-600";
+    if (status === "accepted") return "text-blue-600";
+    if (status === "pending") return "text-yellow-600";
+    if (status === "rejected") return "text-red-600";
+    return "text-gray-600";
+  };
+
+  // Sorts the transfer list by creation date
+  const sorted = [...transferList].sort((a, b) => {
+    const aIsActive = isActiveStatus(a.status);
+    const bIsActive = isActiveStatus(b.status);
+    if (aIsActive !== bIsActive) return aIsActive ? -1 : 1;
+
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  return (
+    <div className="flex flex-col gap-3 w-full">
+      <h2 className="text-lg font-bold">Transfer requests</h2>
+      <button className="btn" onClick={refreshTransferList}>
+        Refresh
+      </button>
+      <div className="flex flex-col gap-3">
+        {sorted.length === 0 && (
+          <div className="p-4 border rounded-lg text-sm text-gray-600">No transfer requests yet.</div>
+        )}
+        {sorted.map((transferRequest) => (
           <div
             key={transferRequest.transferId}
-            className="p-4 border rounded-lg shadow cursor-pointer hover:bg-gray-100 transition"
+            className="p-4 border rounded-lg shadow hover:bg-gray-100 transition"
           >
-            <div className="font-bold">
-              Batch #{transferRequest.batchId}
-            </div>
-
-            <div className="text-sm text-gray-600">
-              {transferRequest.batchName} - Registered on{" "}
-              {new Date(transferRequest.createdAt).toLocaleDateString()} by{" "}
-              {transferRequest.fromCompanyName}
-            </div>
-
-            <div className="text-sm text-gray-600">
-              Company: {transferRequest.fromCompanyName} is sending this batch to{" "}
-              {transferRequest.toCompanyName}
-            </div>
-
-            <div className="text-sm text-gray-600">
-              User: {transferRequest.senderUserName} is sending this batch to{" "}
-              {transferRequest.receivingUserName}
-            </div>
-
-            <div
-              className={`mt-1 text-sm ${
-                transferRequest.status === "accepted"
-                  ? "text-green-600"
-                  : transferRequest.status === "pending"
-                  ? "text-yellow-600"
-                  : transferRequest.status === "rejected"
-                  ? "text-red-600"
-                  : "text-gray-600"
-              }`}
-            >
-              Status: {transferRequest.status}
-            </div>
-
-            {transferRequest.status === "pending" && (
-              <div className="flex flex-row gap-2 mt-2">
-                <button
-                  className="btn btn-sm btn-cancel"
-                  onClick={() => props.cancelBatch(transferRequest.transferId)}
-                >
-                  Cancel Transfer
-                </button>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-bold">{transferRequest.batchName}</div>
+                <div className="text-xs text-gray-500">Batch ID: {transferRequest.batchId}</div>
               </div>
-            )}
+              <div className={`text-sm font-medium ${getStatusClassName(transferRequest.status)}`}>
+                {transferRequest.status}
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <DetailRow
+                label="Route"
+                value={`${transferRequest.fromCompanyName} to ${transferRequest.toCompanyName}`}
+              />
+              <DetailRow label="Requested by" value={transferRequest.senderUserName} />
+              <DetailRow
+                label="Receiving user"
+                value={
+                  transferRequest.receivingUserName && transferRequest.receivingUserName !== ""
+                    ? transferRequest.receivingUserName
+                    : "Not assigned"
+                }
+              />
+              <DetailRow label="Created" value={new Date(transferRequest.createdAt).toLocaleString()} />
+              {transferRequest.blockchain?.status != null && (
+                <DetailRow label="Blockchain" value={transferRequest.blockchain.status} />
+              )}
+            </div>
           </div>
         ))}
-    </>
+      </div>
+    </div>
   );
 }

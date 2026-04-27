@@ -1,17 +1,16 @@
 "use client";
 
-import { CompanyData, UserData } from "@/app/components/utils/types";
-import { usePathname, useRouter } from "next/navigation";
-import { createContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useState, ReactNode } from "react";
+import { CompanyModel, UserModel } from "../utils/types/models";
 
 // Global Varilable Type Definition for Context
 type ContextType = {
     sessionToken: string | null;
-    userData: UserData | null;
-    companyData: CompanyData | null;
+    userData: UserModel | null;
+    companyData: CompanyModel | null;
     setSessionToken: (token: string) => void;
-    setUserData: (user: UserData | null) => void;
-    setCompanyData: (company: CompanyData | null) => void;
+    setUserData: (user: UserModel | null) => void;
+    setCompanyData: (company: CompanyModel | null) => void;
 };
 
 // Create the actual context object with default values
@@ -25,9 +24,9 @@ export const Context = createContext<ContextType>({
 });
 
 export const Provider = ({ children }: { children: ReactNode }) => {
-    // Local state for the context values, they live in this component and are passed down via the context provider
-    const [userData, setUserData] = useState<UserData | null>(null);
-    const [companyData, setCompanyData] = useState<CompanyData | null>(null);
+    // Local state for the context values, they live in this component and are passed down viacontext provider
+    const [userData, setUserData] = useState<UserModel | null>(null);
+    const [companyData, setCompanyData] = useState<CompanyModel | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
 
     return (

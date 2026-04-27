@@ -7,6 +7,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode })  {
     const { sessionToken } = useContext(Context);
     const router = useRouter();
 
+    // Redirects to login if no session token is found
     useEffect(() => {
         if (!sessionToken) {
             console.log("No session token found, redirecting to login.");

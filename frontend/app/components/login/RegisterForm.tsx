@@ -1,185 +1,230 @@
-    "use client";
-    import { useRouter } from "next/navigation";
+"use client";
 
-    import { useContext, useEffect, useState } from "react";
-    import { Context } from "../global/Context";
-    import { RegistrationTokenAPI } from "../utils/apiclient";
+import { useRouter } from "next/navigation";
+import { useContext, useEffect, useState } from "react";
+import { Context } from "../global/Context";
+import { RegistrationTokenAPI } from "../utils/apiclient";
+import type { RegisterUserRequest } from "../utils/types/api-contract";
 
+export default function RegisterForm() {
+  const [registrationToken, setRegistrationToken] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [hasSubmittedToken, setHasSubmittedToken] = useState(false);
+  const [invitedCompanyName, setInvitedCompanyName] = useState("");
+  const [invitedRole, setInvitedRole] = useState("");
 
+  const { sessionToken } = useContext(Context);
+  const router = useRouter();
 
-    export default function RegisterForm() {
-    
-    const [ registrationToken, setRegistrationToken ] = useState("");
-    const [ email, setEmail ] = useState("");
-    const [ password, setPassword ] = useState("");
-    const [ confirmPassword, setConfirmPassword ] = useState("");
-    const [ firstName, setFirstName ] = useState("");
-    const [ lastName, setLastName ] = useState("");
-    const [ hasSubmittedToken, setHasSubmittedToken ] = useState<boolean>(false)
+  // Redirect to home if already logged in
+  // Checks every time the sessionToken changes
+  useEffect(() => {
+    if (sessionToken) {
+      router.replace("/home");
+    }
+  }, [sessionToken, router]);
 
-    const { sessionToken } = useContext(Context);
-    const router = useRouter();
-
-    useEffect(() => {  
-        if(sessionToken) {
-            console.log("Already logged in, redirecting to home.");
-            router.push("/home");
-        }
-    
-    },[])
-
-    const verifyRequiredFields = () => {
-        if (
-            registrationToken === "" || 
-            email === "" || 
-            password === "" || 
-            confirmPassword === "" || 
-            firstName === "" ||
-            lastName === "" 
-        ) {
-            alert("Please Fill out all fields before continuing.");
-            return false;
-        }
-
-        if ( password !== confirmPassword ) {
-            alert ("Your passwords do not match.");
-            return false;
-        }
-
-        return true;
+  // Verify all required fields are filled out and filled correctly
+  const verifyRequiredFields = () => {
+    if (
+      registrationToken.trim() === "" ||
+      email.trim() === "" ||
+      password === "" ||
+      confirmPassword === "" ||
+      firstName.trim() === "" ||
+      lastName.trim() === ""
+    ) {
+      alert("Please fill out all fields before continuing.");
+      return false;
     }
 
-    const submitRegistrationToken = () => {
-        RegistrationTokenAPI.getTokenValues(registrationToken)
-            .then( (response) => {
-                setEmail(response.email);
-                setHasSubmittedToken(true);
-            })
-            .catch( (error) => {
-                console.error("Error using token:", error);
-                alert("Failed to use registration token.");
-            });
-        //setEmail("testemail@test.com");
-        //setHasSubmittedToken(true);
+    if (password !== confirmPassword) {
+      alert("Your passwords do not match.");
+      return false;
+    }
+
+    return true;
+  };
+
+  // checks if all required fields are filled out and filled correctly before submission
+  const canSubmitRegistration =
+    registrationToken.trim() !== "" &&
+    email.trim() !== "" &&
+    password !== "" &&
+    confirmPassword !== "" &&
+    firstName.trim() !== "" &&
+    lastName.trim() !== "" &&
+    password === confirmPassword;
+
+  // sends the enetered reg token to the backend to get the token values
+  const submitRegistrationToken = () => {
+    const code = registrationToken.trim();
+    if (!code) {
+      alert("Enter your registration code first.");
+      return;
+    }
+
+    RegistrationTokenAPI.getTokenValues(code)
+      .then((response) => {
+        setRegistrationToken(code);
+        setEmail(response.email);
+        setInvitedCompanyName(response.companyName);
+        setInvitedRole(response.role);
+        setHasSubmittedToken(true);
+      })
+      .catch((error) => {
+        console.error("Error verifying token:", error);
+        alert("Failed to verify registration code.");
+      });
+  };
+
+  // clears all fields
+  const clearFields = () => {
+    setRegistrationToken("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setFirstName("");
+    setLastName("");
+    setHasSubmittedToken(false);
+    setInvitedCompanyName("");
+    setInvitedRole("");
+  };
+
+  // sends the data to the backend to register the user
+  const registerUserButton = () => {
+    if (!verifyRequiredFields()) return;
+
+    const apiPayload: RegisterUserRequest = {
+      registrationToken: registrationToken.trim(),
+      password,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
     };
 
-    const clearFields = () => {
-        setRegistrationToken("");
-        setEmail("");
-        setPassword("");
-        setConfirmPassword("");
-        setFirstName("");
-        setLastName("");
-        setHasSubmittedToken(false);
-    };
+    RegistrationTokenAPI.consumeToken(apiPayload)
+      .then((response) => {
+        console.log(response.message);
+        clearFields();
+        alert("Registration successful. You can sign in now.");
+        router.replace("/login");
+      })
+      .catch((error) => {
+        console.error("Error registering:", error);
+        alert("Registration failed.");
+      });
+  };
 
-    const registerUserButton = () => {
-        if (!verifyRequiredFields) return;
-        
-        const apiPayload = {
-            registrationToken: registrationToken,
-            password: password,
-            firstName: firstName,
-            lastName: lastName
-        };
+  return (
+    <div className="flex justify-center w-full">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!hasSubmittedToken) {
+            submitRegistrationToken();
+            return;
+          }
+          registerUserButton();
+        }}
+      >
+        <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+          <legend className="fieldset-legend">Register</legend>
 
-        RegistrationTokenAPI.consumeToken(apiPayload)
-            .then( (response) => {
-                console.log(response.message)
-                clearFields;
-                router.replace("/login");
-                alert("Registration Successful! Please use your credentials to sign in.")
-            })
-            .catch( (error) => {
-                console.error("Error using token:", error);
-                alert("Failed to use registration token.");
-            });
-    };
-    
+          <label className="label">Registration code</label>
+          <input
+            type="text"
+            className="input"
+            placeholder="Registration code"
+            value={registrationToken}
+            disabled={hasSubmittedToken}
+            onChange={(e) => setRegistrationToken(e.target.value)}
+            autoComplete="off"
+          />
 
-    return (
-        <div className="min-h-screen flex flex-col">
-            <div className="flex justify-center pb-40">
-                <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
-                <legend className="fieldset-legend">Register</legend>
+          {!hasSubmittedToken ? (
+            <button type="submit" className="btn btn-neutral mt-4" disabled={registrationToken.trim() === ""}>
+              Verify code
+            </button>
+          ) : (
+            <button type="button" className="btn btn-neutral mt-4" onClick={clearFields}>
+              Try new code
+            </button>
+          )}
 
-                <label className="label">Registration Code</label>
-                <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="Registration Code"
-                    value={registrationToken} 
-                    disabled={hasSubmittedToken}
-                    onChange={(e) => setRegistrationToken(e.target.value)}
-                />
-                {/* Use API to verify code and get information for the user (name, company public key, email, etc...) */}
-                {!hasSubmittedToken ?
-                    <button className="btn btn-neutral mt-4" onClick={submitRegistrationToken}>Verify Code</button> :
-                    <button className="btn btn-neutral mt-4" onClick={clearFields}>Try New Code</button>
-                }
-                
-                {/* The email may be auto generated by the registration code */}
-                {hasSubmittedToken && (
+          {hasSubmittedToken && (
+            <>
+              {invitedCompanyName ? (
+                <p className="text-sm text-gray-600 mt-3">
+                  Company: <span className="font-medium text-gray-800">{invitedCompanyName}</span>
+                  {invitedRole ? (
                     <>
-                        <label className="label">Email</label>
-                        <input 
-                            type="email" 
-                            className="input" 
-                            placeholder="Email" 
-                            value={email} 
-                            disabled
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                        
-                        <label className="label">Password</label>
-                        <input 
-                            type="password" 
-                            className="input" 
-                            placeholder="Password" 
-                            value={password} 
-                            onChange={(e: { target: { value: any; }; }) => setPassword(e.target.value)}
-                        />
-                        
-                        <label className="label">Confirm Password</label>
-                        <input 
-                            type="password" 
-                            className={`input 
-                            ${password !== confirmPassword && password !== "" ? "border-red-500" : ""
-                            }`}
-                            placeholder="Confirm Password" 
-                            value={confirmPassword} 
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                        />
-                        
-                        <label className="label">First Name</label>
-                        <input 
-                            className="input" 
-                            placeholder="First Name" 
-                            value={firstName} 
-                            onChange={(e) => setFirstName(e.target.value)}
-                        />
-
-                        <label className="label">Last Name</label>
-                        <input 
-                            className="input" 
-                            placeholder="Last Name" 
-                            value={lastName} 
-                            onChange={(e) => setLastName(e.target.value)}
-                        />
-
-                        <button className="btn btn-neutral mt-4"
-                            disabled={ verifyRequiredFields! ? false : true }
-                            onClick={ registerUserButton }
-                        >
-                            Confirm Registration
-                        </button>
+                      {" "}
+                      · Role: <span className="font-medium text-gray-800">{invitedRole}</span>
                     </>
-                )}
-                
+                  ) : null}
+                </p>
+              ) : null}
 
-                </fieldset>
-                
-            </div>
-        </div>
-    );
+              <label className="label">Email</label>
+              <input
+                type="email"
+                className="input"
+                placeholder="Email"
+                value={email}
+                readOnly
+              />
+
+              <label className="label">Password</label>
+              <input
+                type="password"
+                className="input"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+
+              <label className="label">Confirm password</label>
+              <input
+                type="password"
+                className={`input ${
+                  password !== confirmPassword && confirmPassword !== "" ? "border-red-500" : ""
+                }`}
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+
+              <label className="label">First name</label>
+              <input
+                className="input"
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+
+              <label className="label">Last name</label>
+              <input
+                className="input"
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+
+              <button
+                type="submit"
+                className="btn btn-neutral mt-4"
+                disabled={!canSubmitRegistration}
+              >
+                Confirm registration
+              </button>
+            </>
+          )}
+        </fieldset>
+      </form>
+    </div>
+  );
 }

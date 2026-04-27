@@ -1,254 +1,297 @@
 "use client";
 
-import { useContext, useEffect, useState } from "react";
-import { RegistrationToken } from "../utils/types";
-import { tempTokenListData, testTransferListData } from "@/app/tempData";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Context } from "../global/Context";
-import { RegistrationTokenAPI } from "../utils/apiclient";
-
-
+import DetailRow from "../global/DetailRow";
+import { CompanyAPI, RegistrationTokenAPI } from "../utils/apiclient";
+import type { RegistrationTokenModel } from "../utils/types/models";
 
 export default function CompanyProfile() {
-  const [ viewSelect, setViewSelect ] = useState<string>("companyProfile");
-  const [ registrationTokenData, setRegistrationTokenData ] = useState<RegistrationToken[] | null>([]);
-  const [ companyName, setCompanyName ] = useState<string>("");
-  const [ isEditingCompanyName, setIsEditingCompanyName ] = useState<boolean>(false);
-  const [ newUserEmail, setNewUserEmail ] = useState<string>("")
-  const [ newUserRole, setNewUserRole ] = useState<"user" | "manager">("user")
+  const router = useRouter();
+  const {companyData, sessionToken, setCompanyData, userData} = useContext(Context);
 
-  const { companyData, sessionToken } = useContext(Context);
+  const [viewSelect, setViewSelect] = useState<"companyProfile" | "userRegistration">("companyProfile");
+  const [registrationTokenData, setRegistrationTokenData] = useState<RegistrationTokenModel[]>([]);
+  const [companyName, setCompanyName] = useState("");
 
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"user" | "manager">("user");
+
+  const isManager = userData?.role === "manager";
+
+  // Sets the initial company name
   useEffect(() => {
-    // Get registration token data
-    setCompanyName(companyData?.companyName || "")
-  }, []);
+    if (!companyData) return;
+    setCompanyName(companyData.companyName);
+  }, [companyData]);
 
+  // Checks if the company name has been changed
+  const hasCompanyChanges = useMemo(() => {
+    if (!companyData) return false;
+    return companyName.trim() !== companyData.companyName.trim();
+  }, [companyName, companyData]);
+
+  // Saves the company profile to the backend
   const saveCompanyProfile = () => {
+    if (!sessionToken || !companyData) {
+      alert("You must be logged in.");
+      router.push("/login");
+      return;
+    }
+    if (!isManager) {
+      alert("Only managers can update company details.");
+      return;
+    }
+    const name = companyName.trim();
+    if (!name) {
+      alert("Company name is required.");
+      return;
+    }
 
+    CompanyAPI.updateCompany(sessionToken, companyData.companyId, {
+      name,
+      walletAddress: companyData.walletAddress ?? null,
+    })
+      .then((updated) => {
+        setCompanyData(updated);
+        setCompanyName(updated.companyName);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Could not save company.");
+      });
   };
-  
+
+  // Clears the registration data
   const clearRegistrationData = () => {
     setNewUserRole("user");
     setNewUserEmail("");
   };
 
+  // Gets the updated token list from the backend
+  const getUpdatedTokenList = () => {
+    if (!sessionToken) {
+      router.push("/login");
+      return;
+    }
+    RegistrationTokenAPI.getTokenList(sessionToken)
+      .then((response) => {
+        setRegistrationTokenData(response);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Failed to load registration tokens.");
+      });
+  };
+
+  // Handles the new user view button
   const handleNewUserViewButton = () => {
+    if (!sessionToken) {
+      alert("You must be logged in.");
+      router.push("/login");
+      return;
+    }
+    if (!isManager) {
+      alert("Only managers can manage registration tokens.");
+      return;
+    }
     getUpdatedTokenList();
     setViewSelect("userRegistration");
   };
 
-  const getUpdatedTokenList = () => {
-    RegistrationTokenAPI.getTokenList(sessionToken!)
-      .then( response => {
-        setRegistrationTokenData(response);
-        console.log("Got Token Data.")
+  // Requests a new user token from the backend
+  const requestNewUserTokenButton = () => {
+    if (!sessionToken) return;
+    const email = newUserEmail.trim();
+    if (!email) return;
+
+    RegistrationTokenAPI.generateToken(sessionToken, {
+      userEmail: email,
+      role: newUserRole,
+    })
+      .then(() => {
+        getUpdatedTokenList();
+        clearRegistrationData();
       })
-      .catch( error => {
+      .catch((error) => {
         console.error("Error:", error);
+        alert("Could not create registration token.");
       });
   };
 
-  const requestNewUserTokenButton = () => {
-    const apiPayload = {
-      userEmail: newUserEmail,
-      role: newUserRole,
-    };
-
-    RegistrationTokenAPI.generateToken( sessionToken!, apiPayload )
-      .then( response => {
-        console.log("Token Created Successfully!");
-        getUpdatedTokenList()
-        clearRegistrationData();
-      })
-      .catch( error => {
-        console.error("Error:", error);
-      })
-  };
-
-  const revokeToken = (token: RegistrationToken) => {
-    RegistrationTokenAPI.revokeToken( sessionToken!, token.registration_token_id)
-      .then( response => {
+  // Revokes a user token from the backend
+  const revokeToken = (token: RegistrationTokenModel) => {
+    if (!sessionToken) return;
+    RegistrationTokenAPI.revokeToken(sessionToken, token.tokenId)
+      .then(() => {
         getUpdatedTokenList();
-        console.log("Token Revoked Successfully!");
       })
-      .catch( error => {
+      .catch((error) => {
         console.error("Error:", error);
-      })
+        alert("Could not revoke token.");
+      });
   };
 
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex justify-center pb-40">
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-row gap-2">
-            <button 
-              className={`btn btn-sm ${viewSelect === "companyProfile" ? 'selected-styles' : 'default-styles'}`}
-              onClick={() => {setViewSelect("companyProfile");}}
+        <div className="flex flex-col gap-4 p-4 w-full max-w-lg mx-auto">
+          <h1 className="text-2xl font-bold">Company</h1>
+
+          <div className="flex flex-row gap-2 flex-wrap">
+            <button
+              type="button"
+              className={`btn btn-sm ${viewSelect === "companyProfile" ? "selected-styles" : "default-styles"}`}
+              onClick={() => setViewSelect("companyProfile")}
             >
-              Manage the Company Profile
+              Company profile
             </button>
-            <button 
-              className={`btn btn-sm ${viewSelect === "userRegistration" ? 'selected-styles' : 'default-styles'}`}
+            <button
+              type="button"
+              className={`btn btn-sm ${viewSelect === "userRegistration" ? "selected-styles" : "default-styles"}`}
               onClick={handleNewUserViewButton}
             >
-              Register New users
+              User registration tokens
             </button>
           </div>
-          { viewSelect === "companyProfile" &&
-            <div className="max-w-md mx-auto p-4 border rounded-lg shadow">
-              <h2 className="text-2xl font-bold mb-4">Company Profile</h2>
 
-              <div className="mb-2">
-                <p className="text-sm text-gray-500">Company ID</p>
-                <p className="font-mono">{companyData?.companyId}</p>
-              </div>
+          {viewSelect === "companyProfile" && (
+            <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
+              <legend className="fieldset-legend">Details</legend>
+              <DetailRow label="Company ID" value={companyData?.companyId ?? ""} mono />
 
-              <div className="mb-4">
-                <label className="text-sm text-gray-500">Company Name</label>
-                <input
-                  className={`input input-bordered w-full ${ companyData?.companyName  === companyName.trim() ? "" : "border-green-400 focus:border-green-500 focus:ring-green-200" }`}
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  readOnly={!isEditingCompanyName}
-                />
-                {isEditingCompanyName ?
-                  <>
-                    <label
-                      onClick={() => { setCompanyName(companyData?.companyName ?? ""); setIsEditingCompanyName(false); }}
-                      className="cursor-pointer text-red-500 hover:text-red-700 transition-colors"
-                    >
-                      ⤺ Revert 
-                    </label>
-                  </> :
-                  <>
-                    <label
-                      onClick={() => setIsEditingCompanyName(true)}
-                      className="cursor-pointer text-blue-500 hover:text-blue-700 transition-colors"
-                    >
-                      ✎ Edit
-                    </label>
-                  </>
-                }
-              </div>
-              <div className="mb-4">
-                <p className="text-sm text-gray-500">Wallet Address</p>
-                <p className="font-mono break-all">
-                  {companyData?.walletAddress || "Not assigned"}
-                </p>
-              </div>
+              <label className="label">Company name</label>
+              <input
+                className="input input-bordered w-full"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                readOnly={!isManager}
+                autoComplete="organization"
+              />
 
-              <button className="btn w-full" onClick={saveCompanyProfile} disabled={companyData?.companyName === companyName.trim() ? true : false}>
-                Save Changes
-              </button>
-            </div>
-          }
-          { viewSelect === "userRegistration" &&
-            <>
-              <div className="max-w-md mx-auto p-4 border rounded-lg shadow">
-                <h2 className="text-2xl font-bold mb-4">Create a New-User Token</h2>
+              <label className="label mt-3">Wallet address</label>
+              <p className="font-mono text-sm break-all">{companyData?.walletAddress || "Not assigned"}</p>
 
-                <div className="mb-2">
-                  <p className="text-sm text-gray-500">Company ID</p>
-                  <p className="font-mono">{companyData?.companyId}</p>
-                </div>
+              {!isManager && <p className="text-sm text-gray-600 mt-3">Manager only.</p>}
 
-                <div className="mb-2">
-                  <p className="text-sm text-gray-500">Company Name</p>
-                  <p className="font-mono">{companyData?.companyName}</p>
-                </div>
-
-                <div className="mb-4">
-                  <label className="text-sm text-gray-500">New User's Email</label>
-                  <input
-                    className={`input input-bordered w-full`}
-                    value={newUserEmail}
-                    onChange={(e) => setNewUserEmail(e.target.value)}
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="text-sm text-gray-500">User Role</label>
-
-                  <div className="flex gap-4 mt-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="role"
-                        value="user"
-                        className="radio"
-                        checked={newUserRole === "user"}
-                        onChange={() => setNewUserRole("user")}
-                      />
-                      <span>User</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="role"
-                        value="manager"
-                        className="radio"
-                        checked={newUserRole === "manager"}
-                        onChange={() => setNewUserRole("manager")}
-                      />
-                      <span>Manager</span>
-                    </label>
-                  </div>
-                </div>
-                <button className="btn w-full" onClick={requestNewUserTokenButton} disabled={newUserEmail.trim() === "" ? true : false}>
-                  Request Token
+              {isManager && (
+                <button
+                  type="button"
+                  className="btn btn-neutral mt-4 w-full sm:w-auto"
+                  disabled={!hasCompanyChanges}
+                  onClick={saveCompanyProfile}
+                >
+                  Save changes
                 </button>
-              </div>
+              )}
+            </fieldset>
+          )}
 
-              <h2 className="text-lg font-bold">Registration Token List</h2>
-              <div className="flex flex-col gap-3">
-                {registrationTokenData?.map((token) => 
-                  <div
-                    key={token.registration_token_id}
-                    className="p-4 border rounded-lg shadow flex justify-between items-center"
-                  >
-                    <div className="flex flex-col">
-                      <div className="font-bold">
-                        {token.email}
-                      </div>
-                      <div className="mt-1 text-sm">
-                        Token: {token.registrationToken}
-                      </div>
-                      <div className="mt-1 text-sm">
-                        Role: {token.role}
-                      </div>
-                      <div className="mt-1 text-sm">
-                        ID: {token.registration_token_id}
-                      </div>
-                      <div
-                        className={`mt-1 text-sm ${
-                          token.status === "used"
-                            ? "text-green-600"
-                            : token.status === "revoked"
-                            ? "text-red-600"
-                            : token.status === "pending"
-                            ? "text-yellow-600"
-                            : "text-gray-600"
-                        }`}
-                      >
-                        Status: {token.status}
-                      </div>
+          {viewSelect === "userRegistration" && (
+            <div className="flex flex-col gap-4">
+              {!isManager ? (
+                <p className="text-sm text-gray-600">Only managers can create or revoke registration tokens.</p>
+              ) : (
+                <>
+                  <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
+                    <legend className="fieldset-legend">New token</legend>
+                    <DetailRow label="Company ID" value={companyData?.companyId ?? ""} mono />
+                    <DetailRow label="Company name" value={companyData?.companyName ?? ""} />
+
+                    <label className="label">Email for invite</label>
+                    <input
+                      className="input input-bordered w-full"
+                      type="email"
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
+                      autoComplete="email"
+                    />
+
+                    <span className="label mt-3">Role</span>
+                    <div className="flex gap-4 mt-1">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="role"
+                          className="radio"
+                          checked={newUserRole === "user"}
+                          onChange={() => setNewUserRole("user")}
+                        />
+                        <span>User</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="role"
+                          className="radio"
+                          checked={newUserRole === "manager"}
+                          onChange={() => setNewUserRole("manager")}
+                        />
+                        <span>Manager</span>
+                      </label>
                     </div>
-                    {token.status === "pending" &&
-                      <div className="flex justify-end mt-2">
-                        <button className="btn btn-sm btn-cancel transition-all duration-200 hover:brightness-95 hover:shadow-sm" onClick={() => revokeToken(token)}>
-                          Revoke Token
-                        </button>
-                      </div>
-                    }
-                  </div>
-                )}
-              </div>
-            </>
-          }
 
-          
+                    <button
+                      type="button"
+                      className="btn w-full mt-4"
+                      onClick={requestNewUserTokenButton}
+                      disabled={newUserEmail.trim() === ""}
+                    >
+                      Create token
+                    </button>
+                  </fieldset>
+
+                  <div>
+                    <h2 className="text-lg font-bold mb-3">Outstanding tokens</h2>
+                    <div className="flex flex-col gap-3">
+                      {registrationTokenData.length === 0 ? (
+                        <p className="text-sm text-gray-600">No tokens loaded yet.</p>
+                      ) : (
+                        registrationTokenData.map((token) => (
+                          <div
+                            key={token.tokenId}
+                            className="p-4 border rounded-lg shadow flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3"
+                          >
+                            <div className="flex flex-col min-w-0">
+                              <div className="font-bold">{token.email}</div>
+                              <div className="mt-1 text-xs font-mono break-all text-gray-600">{token.registrationToken}</div>
+                              <div className="mt-1 text-sm">Role: {token.role}</div>
+                              <div className="mt-1 text-sm">ID: {token.tokenId}</div>
+                              <div
+                                className={`mt-1 text-sm ${
+                                  token.status === "used"
+                                    ? "text-green-600"
+                                    : token.status === "revoked"
+                                      ? "text-red-600"
+                                      : token.status === "pending"
+                                        ? "text-yellow-600"
+                                        : "text-gray-600"
+                                }`}
+                              >
+                                {token.status}
+                              </div>
+                            </div>
+                            {token.status === "pending" && (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline"
+                                onClick={() => revokeToken(token)}
+                              >
+                                Revoke
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </div>  
+    </div>
   );
 }
