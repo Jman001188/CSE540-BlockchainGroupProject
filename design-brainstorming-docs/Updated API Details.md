@@ -300,6 +300,21 @@ Creates a new product batch, records ownership under the authenticated company, 
   - Blockchain Contract assigns the batchId as the in the same index as the apps ID
   - updates status (confirmed or failed)
 
+#### Hashed Data Structure
+```json
+{
+  "batchId": "<uuid>",
+  "batchName": string,
+  "batchDescription": string,
+  "derivedBatches": [
+    "<uuid>",
+    "<uuid>"
+  ],
+  "companyId": "<uuid>",
+  "createdAt": string
+}
+```
+
 **Request**
 Authorization: Bearer <sessionToken>
 ```json
@@ -351,9 +366,9 @@ Authorization: Bearer <sessionToken>
 	  "registeringUserId": "uuid",
 	  "registeringUserName": string,
 	  "blockchain": {
-		"transactionId": "uuid",
-		"status": "pending | confirmed | failed",
-		"dataHash": string
+      "transactionId": "uuid",
+      "status": "pending | confirmed | failed",
+      "dataHash": string
 	  }
 	}
 ]
@@ -383,9 +398,9 @@ Retrieves detailed information for a specific batch.
   "registeringUserId": "uuid",
   "registeringUserName": string,
   "blockchain": {
-	"transactionId": "uuid",
-	"status": "pending | confirmed | failed",
-	"dataHash": string
+    "transactionId": "uuid",
+    "status": "pending | confirmed | failed",
+    "dataHash": string
   }
 }
 ```
@@ -407,6 +422,16 @@ the userID is used for destination filtering, but anyone in the company can acce
 - Creates transfer record:
   - status = pending
 
+#### Hashed Data Structure
+```json
+{
+  "transferId:: "<uuid>",
+  "batchId": "uuid",
+  "fromCompanyId": "uuid",
+  "toCompanyId": "uuid",
+  "createdAt": string
+}
+```
 **Request**
 Authorization: Bearer <sessionToken>
 ```json

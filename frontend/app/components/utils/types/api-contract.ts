@@ -82,6 +82,7 @@ export interface UpdateCompanyRequest {
 export interface CreateBatchRequest {
   batchName: string;
   batchDescription: string;
+  derivedBatchIds: Uuid[];
 }
 
 export interface CreateBatchResponse {

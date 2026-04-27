@@ -9,11 +9,14 @@ All endpoints accept and return JSON. For authenticated routes, pass the JWT as 
 ## 🏢 0. Utility, Admin & Company Management
 
 ### Create a Company
+
 Creates a new organization in the supply chain network.
-* **Endpoint:** `POST /company`
-* **Auth Required:** No
+
+- **Endpoint:** `POST /company`
+- **Auth Required:** No
 
 **Request**
+
 ```json
 {
   "name": "string"
@@ -21,6 +24,7 @@ Creates a new organization in the supply chain network.
 ```
 
 **Response (201)**
+
 ```json
 {
   "company_id": "uuid",
@@ -31,11 +35,14 @@ Creates a new organization in the supply chain network.
 ```
 
 ### Get Company Details
+
 Fetches public details for a specific company.
-* **Endpoint:** `GET /company/:companyId`
-* **Auth Required:** No
+
+- **Endpoint:** `GET /company/:companyId`
+- **Auth Required:** No
 
 **Response (200)**
+
 ```json
 {
   "company_id": "uuid",
@@ -46,11 +53,14 @@ Fetches public details for a specific company.
 ```
 
 ### Get All Companies
+
 Retrieves a list of all registered companies.
-* **Endpoint:** `GET /companies`
-* **Auth Required:** No
+
+- **Endpoint:** `GET /companies`
+- **Auth Required:** No
 
 **Response (200)**
+
 ```json
 [
   {
@@ -63,11 +73,14 @@ Retrieves a list of all registered companies.
 ```
 
 ### Super Admin: Create Manager Token
+
 Bypasses manual SQL to instantly generate a manager registration token for a specific company (Internal Staff API).
-* **Endpoint:** `POST /auth/admin/manager-token`
-* **Auth Required:** No
+
+- **Endpoint:** `POST /auth/admin/manager-token`
+- **Auth Required:** No
 
 **Request**
+
 ```json
 {
   "companyId": "uuid",
@@ -76,6 +89,7 @@ Bypasses manual SQL to instantly generate a manager registration token for a spe
 ```
 
 **Response (201)**
+
 ```json
 {
   "registrationTokenId": "uuid",
@@ -84,10 +98,12 @@ Bypasses manual SQL to instantly generate a manager registration token for a spe
 ```
 
 ### System Health Check
-* **Endpoint:** `GET /`
-* **Auth Required:** No
+
+- **Endpoint:** `GET /`
+- **Auth Required:** No
 
 **Response (200)**
+
 ```text
 The Honest Harvest API is running!
 ```
@@ -97,20 +113,25 @@ The Honest Harvest API is running!
 ## 🔐 1. Users & Authentication
 
 ### Create Registration Token
+
 Creates a secure token allowing a new user to join the manager's company.
-* **Endpoint:** `POST /auth/registration-tokens`
-* **Auth Required:** Yes (Manager)
+
+- **Endpoint:** `POST /auth/registration-tokens`
+- **Auth Required:** Yes (Manager)
 
 **Request**
+
 ```json
 {
   "userEmail": "new@example.com",
   "role": "user" 
 }
 ```
+
 *(Role can be "user" or "manager")*
 
 **Response (201)**
+
 ```json
 {
   "registrationTokenId": "uuid",
@@ -119,11 +140,14 @@ Creates a secure token allowing a new user to join the manager's company.
 ```
 
 ### Revoke Registration Token
+
 Invalidates a pending token.
-* **Endpoint:** `POST /auth/registration-tokens/:id/revoke`
-* **Auth Required:** Yes (Manager)
+
+- **Endpoint:** `POST /auth/registration-tokens/:id/revoke`
+- **Auth Required:** Yes (Manager)
 
 **Response (200)**
+
 ```json
 {
   "registration_token_id": "uuid",
@@ -132,11 +156,14 @@ Invalidates a pending token.
 ```
 
 ### Get Registration Token List
+
 Retrieves all registration tokens for the manager's company.
-* **Endpoint:** `GET /auth/registration-tokens/token-list`
-* **Auth Required:** Yes (Manager)
+
+- **Endpoint:** `GET /auth/registration-tokens/token-list`
+- **Auth Required:** Yes (Manager)
 
 **Response (200)**
+
 ```json
 [
   {
@@ -155,11 +182,14 @@ Retrieves all registration tokens for the manager's company.
 ```
 
 ### Get Registration Token Details
+
 Public lookup to pre-fill registration forms.
-* **Endpoint:** `POST /auth/registration-tokens/token`
-* **Auth Required:** No
+
+- **Endpoint:** `POST /auth/registration-tokens/token`
+- **Auth Required:** No
 
 **Request**
+
 ```json
 {
   "registrationToken": "hex-string"
@@ -167,6 +197,7 @@ Public lookup to pre-fill registration forms.
 ```
 
 **Response (200)**
+
 ```json
 {
   "tokenId": "uuid",
@@ -183,11 +214,14 @@ Public lookup to pre-fill registration forms.
 ```
 
 ### Register User
+
 Consumes a pending token to create a user account.
-* **Endpoint:** `POST /auth/register`
-* **Auth Required:** No
+
+- **Endpoint:** `POST /auth/register`
+- **Auth Required:** No
 
 **Request**
+
 ```json
 {
   "registrationToken": "string",
@@ -198,6 +232,7 @@ Consumes a pending token to create a user account.
 ```
 
 **Response (201)**
+
 ```json
 {
   "message": "Registration successful."
@@ -205,11 +240,14 @@ Consumes a pending token to create a user account.
 ```
 
 ### User Login
+
 Authenticates credentials (email is case-insensitive) and returns the JWT.
-* **Endpoint:** `POST /auth/login`
-* **Auth Required:** No
+
+- **Endpoint:** `POST /auth/login`
+- **Auth Required:** No
 
 **Request**
+
 ```json
 {
   "email": "user@example.com",
@@ -218,6 +256,7 @@ Authenticates credentials (email is case-insensitive) and returns the JWT.
 ```
 
 **Response (200)**
+
 ```json
 {
   "sessionToken": "jwt-string",
@@ -238,11 +277,14 @@ Authenticates credentials (email is case-insensitive) and returns the JWT.
 ```
 
 ### User Logout
+
 Ends a user session (client-side token deletion).
-* **Endpoint:** `POST /auth/logout`
-* **Auth Required:** Yes
+
+- **Endpoint:** `POST /auth/logout`
+- **Auth Required:** Yes
 
 **Response (200)**
+
 ```json
 {
   "message": "Logged out successfully"
@@ -250,11 +292,14 @@ Ends a user session (client-side token deletion).
 ```
 
 ### Update User Profile
+
 Updates basic profile information (self-edit only).
-* **Endpoint:** `PATCH /users/:userId`
-* **Auth Required:** Yes
+
+- **Endpoint:** `PATCH /users/:userId`
+- **Auth Required:** Yes
 
 **Request**
+
 ```json
 {
   "firstName": "NewFirst",
@@ -263,6 +308,7 @@ Updates basic profile information (self-edit only).
 ```
 
 **Response (200)**
+
 ```json
 {
   "user": {
@@ -279,11 +325,14 @@ Updates basic profile information (self-edit only).
 ## 📦 2. Core Supply Chain (Batches)
 
 ### Register a New Batch
+
 Introduces a product lot and prepares blockchain interaction.
-* **Endpoint:** `POST /batches`
-* **Auth Required:** Yes
+
+- **Endpoint:** `POST /batches`
+- **Auth Required:** Yes
 
 **Request**
+
 ```json
 {
   "batchName": "string",
@@ -292,6 +341,7 @@ Introduces a product lot and prepares blockchain interaction.
 ```
 
 **Response (201)**
+
 ```json
 {
   "batchId": "uuid",
@@ -307,11 +357,14 @@ Introduces a product lot and prepares blockchain interaction.
 ```
 
 ### Get Batch List
+
 Retrieves all batches owned by the authenticated user's company.
-* **Endpoint:** `GET /batches`
-* **Auth Required:** Yes
+
+- **Endpoint:** `GET /batches`
+- **Auth Required:** Yes
 
 **Response (200)**
+
 ```json
 [
   {
@@ -333,11 +386,14 @@ Retrieves all batches owned by the authenticated user's company.
 ```
 
 ### Get Batch Details
+
 Public lookup for a specific batch.
-* **Endpoint:** `GET /batches/:batchId`
-* **Auth Required:** No
+
+- **Endpoint:** `GET /batches/:batchId`
+- **Auth Required:** No
 
 **Response (200)**
+
 ```json
 {
   "batchId": "uuid",
@@ -361,11 +417,14 @@ Public lookup for a specific batch.
 ## 🚚 3. Transfers
 
 ### Initiate Transfer
+
 Creates a pending request to move a batch. Locks the batch.
-* **Endpoint:** `POST /transfers`
-* **Auth Required:** Yes (Sender)
+
+- **Endpoint:** `POST /transfers`
+- **Auth Required:** Yes (Sender)
 
 **Request**
+
 ```json
 {
   "batchId": "uuid",
@@ -375,6 +434,7 @@ Creates a pending request to move a batch. Locks the batch.
 ```
 
 **Response (201)**
+
 ```json
 {
   "transferId": "uuid",
@@ -389,11 +449,14 @@ Creates a pending request to move a batch. Locks the batch.
 ```
 
 ### Get Transfer List
+
 Fetches transfers involving the authenticated user's company.
-* **Endpoint:** `GET /transfers`
-* **Auth Required:** Yes
+
+- **Endpoint:** `GET /transfers`
+- **Auth Required:** Yes
 
 **Response (200)**
+
 ```json
 [
   {
@@ -415,11 +478,14 @@ Fetches transfers involving the authenticated user's company.
 ```
 
 ### Complete Transfer
+
 Finalizes transfer, shifts ownership, triggers smart contract.
-* **Endpoint:** `POST /transfers/:transferId/complete`
-* **Auth Required:** Yes (Receiver)
+
+- **Endpoint:** `POST /transfers/:transferId/complete`
+- **Auth Required:** Yes (Receiver)
 
 **Response (200)**
+
 ```json
 {
   "message": "Accepted Transfer."
@@ -427,11 +493,14 @@ Finalizes transfer, shifts ownership, triggers smart contract.
 ```
 
 ### Reject Transfer
+
 Declines transfer, unlocking the batch for the sender.
-* **Endpoint:** `POST /transfers/:transferId/reject`
-* **Auth Required:** Yes (Receiver)
+
+- **Endpoint:** `POST /transfers/:transferId/reject`
+- **Auth Required:** Yes (Receiver)
 
 **Response (200)**
+
 ```json
 {
   "message": "Rejected Transfer."
@@ -476,3 +545,6 @@ graph LR
         TR_API["POST /transfers<br>GET /transfers<br>POST .../:id/complete<br>POST .../:id/reject"]:::endpoint --> DB_CHAIN
     end
 ```
+
+
+

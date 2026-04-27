@@ -60,3 +60,13 @@ CREATE TABLE IF NOT EXISTS transfers (
     --blockchain_status TEXT CHECK (blockchain_status IN ('pending', 'confirmed', 'failed'))
     blockchain_status TEXT CHECK (blockchain_status IN ('pending approval', 'approved', 'rejected', 'transfer complete', 'transfer failed'))
 );
+
+CREATE TABLE IF NOT EXISTS batch_lineage (
+    lineage_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    new_batch_id  uuid NOT NULL REFERENCES batches (batch_id) ON DELETE RESTRICT,
+    source_batch_id   uuid NOT NULL REFERENCES batches (batch_id) ON DELETE RESTRICT,
+    created_at        TIMESTAMP NOT NULL DEFAULT now(),
+
+    CONSTRAINT batch_lineage_no_self CHECK (new_batch_id <> source_batch_id),
+    CONSTRAINT batch_lineage_one_edge_per_pair UNIQUE (new_batch_id, source_batch_id)
+);

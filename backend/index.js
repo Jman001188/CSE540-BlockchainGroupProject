@@ -271,6 +271,43 @@ app.post('/batches', authenticateToken, async (req, res) => {
         // --- STEP 1: Save Initial 'Pending' State to Database ---
         const sql = `INSERT INTO batches (batch_name, batch_description, company_id, created_by, blockchain_status) 
                      VALUES ($1, $2, $3, $4, 'pending') RETURNING *`;
+        const result = await db.query(sql, [
+            req.body.batchName, 
+            req.body.batchDescription, 
+            req.user.companyId, 
+            req.user.userId
+        ]);
+        
+        const batch = result.rows[0];
+
+        // Create batch lineage and store in DB
+        for (const derivedBatchId of req.body.derivedBatchIds) {
+            const sql = `INSERT INTO batch_lineage (new_batch_id, source_batch_id) VALUES ($1, $2) RETURNING *`;
+            await db.query(sql, [
+                batch.batch_id, 
+                derivedBatchId, 
+            ]);
+        }
+
+        // Hash complete data
+        const dataToHash = {
+            batchId: batch.batch_id,
+            batchName: batch.batch_name,
+            batchDescription: batch.batch_description,
+            derivedBatches: req.body.derivedBatchIds,
+            companyId: batch.company_id,
+            createdAt: batch.created_at
+        };
+        const dataHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
+
+        // Store Hashed data in DB
+        const updateBatchSql = `UPDATE batches SET data_hash = $1 WHERE batch_id = $2`;
+        await db.query(updateBatchSql, [dataHash, batch.batch_id]);
+
+        // TODO:
+        // Call smart contract to register batch.
+        // subscribe to blockchain event to update blockchain status once it's accepted on the chain
+
         const dbResult = await db.query(sql, [batchName, batchDescription, req.user.companyId, req.user.userId]);
         const batch = dbResult.rows[0];
 
@@ -416,6 +453,25 @@ app.post('/transfers', authenticateToken, async (req, res) => {
         ]);
         
         const t = result.rows[0];
+
+        // Hash compelte data
+        const dataToHash = {
+            transferId: t.transfer_id,
+            batchId: t.batch_id,
+            fromCompanyId: t.from_company_id,
+            toCompanyId: t.to_company_id,
+            createdAt: t.created_at
+        }
+        const dataHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
+
+        // Store Hashed data in DB
+        const updateTransferSql = `UPDATE transfers SET data_hash = $1 WHERE transfer_id = $2`;
+        await db.query(updateTransferSql, [dataHash, t.transfer_id]);
+
+        // TODO:
+        // Call smart contract to initiate transfer.
+        // subscribe to blockchain event to update blockchain status once it's accepted on the chain
+
         res.status(201).json({
             transferId: t.transfer_id,
             batchId: t.batch_id,
