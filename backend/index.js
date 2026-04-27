@@ -11,6 +11,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 const { ethers } = require('ethers');
+const axios = require('axios');
+const { ethers } = require('ethers');
+
+// You will get this from your Solidity developer when they compile the contract!
+// It tells ethers.js exactly what functions exist on the contract.
+const contractABI = [
+    "function registerItem(uint256 itemID, string dataHash) external",
+    "function transferOwnership(uint256 itemID, address newOwner) external",
+    "function getItem(uint256 itemID) external view returns (uint256, address, string)"
+];
 
 // Log a message on every connection
 app.use((req, res, next) => {
@@ -250,31 +260,70 @@ app.patch('/users/:userId', authenticateToken, async (req, res) => {
 // --- 3. CORE SUPPLY CHAIN & TRANSFERS ---
 
 // Register a New Batch
+// Register a New Batch (DB + IPFS + Blockchain)
 app.post('/batches', authenticateToken, async (req, res) => {
     try {
+        const { batchName, batchDescription } = req.body;
+
+        // --- STEP 1: Save Initial 'Pending' State to Database ---
         const sql = `INSERT INTO batches (batch_name, batch_description, company_id, created_by, blockchain_status) 
                      VALUES ($1, $2, $3, $4, 'pending') RETURNING *`;
-        const result = await db.query(sql, [
-            req.body.batchName, 
-            req.body.batchDescription, 
-            req.user.companyId, 
-            req.user.userId
-        ]);
-        
-        const batch = result.rows[0];
-        res.status(201).json({
-            batchId: batch.batch_id,
-            batchName: batch.batch_name,
-            batchDescription: batch.batch_description,
-            createdAt: batch.created_at,
-            blockchain: {
-                transactionId: batch.blockchain_tx_id,
-                status: batch.blockchain_status
+        const dbResult = await db.query(sql, [batchName, batchDescription, req.user.companyId, req.user.userId]);
+        const batch = dbResult.rows[0];
+
+        // --- STEP 2: Upload Metadata to IPFS via Pinata ---
+        // We hash the actual descriptive data to keep it off the blockchain
+        const ipfsPayload = {
+            name: batchName,
+            description: batchDescription,
+            creator: req.user.companyId,
+            timestamp: new Date().toISOString()
+        };
+
+        const pinataResponse = await axios.post('https://api.pinata.cloud/pinning/pinJSONToIPFS', ipfsPayload, {
+            headers: {
+                'pinata_api_key': process.env.PINATA_API_KEY,
+                'pinata_secret_api_key': process.env.PINATA_SECRET_KEY
             }
         });
+        
+        const ipfsCID = pinataResponse.data.IpfsHash; // This is your 'dataHash' string!
+
+        // --- STEP 3: Register on Smart Contract ---
+        // Setup Ethers connection
+        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+        const wallet = new ethers.Wallet(process.env.COMPANY_PRIVATE_KEY, provider);
+        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, wallet);
+
+        // Call the contract (Passing the DB batch_id and the IPFS string)
+        const tx = await contract.registerItem(batch.batch_id, ipfsCID);
+        
+        // Wait for the transaction to be mined
+        const receipt = await tx.wait(); 
+
+        // --- STEP 4: Update Database with Final Blockchain Data ---
+        const updateSql = `UPDATE batches 
+                           SET blockchain_status = 'confirmed', blockchain_tx_id = $1, data_hash = $2 
+                           WHERE batch_id = $3 RETURNING *`;
+        const finalResult = await db.query(updateSql, [receipt.hash, ipfsCID, batch.batch_id]);
+        const finalBatch = finalResult.rows[0];
+
+        // --- STEP 5: Return Success to Frontend ---
+        res.status(201).json({
+            batchId: finalBatch.batch_id,
+            batchName: finalBatch.batch_name,
+            batchDescription: finalBatch.batch_description,
+            createdAt: finalBatch.created_at,
+            blockchain: {
+                transactionId: finalBatch.blockchain_tx_id,
+                status: finalBatch.blockchain_status,
+                ipfsHash: finalBatch.data_hash // The frontend can use this to fetch data from IPFS!
+            }
+        });
+
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to create batch" });
+        console.error("Batch Creation Failed:", err);
+        res.status(500).json({ error: "Failed to fully register batch. Check logs for details." });
     }
 });
 
