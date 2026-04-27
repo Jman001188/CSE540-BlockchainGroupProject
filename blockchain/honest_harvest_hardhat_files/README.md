@@ -93,6 +93,7 @@ Saved ABI to abi/SupplyChainContract.json
 After deployment, restart the backend so it picks up the new contract address:
 
 docker-compose restart backend
+
 5) Verify Setup
 Frontend
 
@@ -102,26 +103,28 @@ http://localhost:3000
 
 Test:
 
-Register / login
-Any action that triggers backend requests
-Backend (quick check)
-curl http://localhost:8080
-Contract (Hardhat console)
-npx hardhat console --network localhost
+- Register / login
+- Any action that triggers backend requests
+- Backend (quick check)
+- curl http://localhost:8080
+- Contract (Hardhat console)
+- npx hardhat console --network localhost
 
 Then (inside Hardhat console):
 
-const addressInfo = require("./deployments/deployed-address.json");
-const contract = await ethers.getContractAt("SupplyChainContract", addressInfo.address);
-await contract.currentID();
+- const addressInfo = require("./deployments/deployed-address.json");
+- const contract = await ethers.getContractAt("SupplyChainContract", addressInfo.address);
+- await contract.currentID();
 
 Important Notes
+
 If you restart the Hardhat node
 
 You must redeploy the contract and restart the backend:
 
-npx hardhat run scripts/deploy.js --network localhost
-docker-compose restart backend
+- npx hardhat run scripts/deploy.js --network localhost
+- docker-compose restart backend
+
 Backend Blockchain Connection
 
 Inside Docker, the backend must connect using:
@@ -131,12 +134,16 @@ http://host.docker.internal:8545
 Do not use localhost inside the container.
 
 Common Issues
+
 Backend: Cannot find module 'express'
-cd backend
-npm install
-docker-compose up --build
+
+- cd backend
+- npm install
+- docker-compose up --build
+
 Hardhat not found
-npm install
+
+- npm install
 
 Run inside the Hardhat folder.
 
@@ -149,6 +156,7 @@ contracts/SupplyChainContract.sol
 And the contract name matches:
 
 contract SupplyChainContract
+
 Architecture Overview
 Frontend (http://localhost:3000)
         ↓
@@ -159,7 +167,9 @@ Ethers.js
 Hardhat Node (http://127.0.0.1:8545)
         ↓
 Smart Contract
+
 Quick Start
+
 # Terminal 1
 docker-compose up
 
