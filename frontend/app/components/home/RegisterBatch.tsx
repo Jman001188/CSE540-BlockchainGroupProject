@@ -7,6 +7,7 @@ import { Context } from "../global/Context";
 import { BatchAPI } from "../utils/apiclient";
 import type { CreateBatchRequest } from "../utils/types/api-contract";
 import type { BatchModel } from "../utils/types/models";
+import { Uuid } from "../utils/types/primitives";
 
 export default function RegisterBatch() {
   const [batchList, setBatchList] = useState<BatchModel[]>([]);
@@ -14,6 +15,7 @@ export default function RegisterBatch() {
   const [viewSelect, setViewSelect] = useState<"register" | "list">("register");
   const [itemNameInput, setItemNameInput] = useState("");
   const [itemDescriptionInput, setItemDescriptionInput] = useState("");
+  const [derivedBatchIdsInput, setDerivedBatchIdsInput] = useState<Uuid[]>([]);
   const { sessionToken } = useContext(Context);
 
   const router = useRouter();
@@ -68,10 +70,11 @@ export default function RegisterBatch() {
       alert("Please enter an item name and description.");
       return;
     }
-
+    
     const apiPayload: CreateBatchRequest = {
       batchName: tempName,
       batchDescription: description,
+      derivedBatchIds: derivedBatchIdsInput, // Finish by completing the Input UI
     };
 
     BatchAPI.registerBatch(sessionToken, apiPayload)

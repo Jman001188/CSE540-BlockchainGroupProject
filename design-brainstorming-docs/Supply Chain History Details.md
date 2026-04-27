@@ -49,7 +49,7 @@ Lineage edges stay ingredient → product; custody stays per-node.
 
 **History (single endpoint)** — everything the map needs in one response:
 
-- **`GET /batches/:batchId/supply-chain`** — Auth rules are your call (public slice vs logged-in vs same-company). Handler: upstream-only lineage closure from `:batchId`, then load all `transfers` for every batch id in that set. Response should include at least:
+- `**GET /batches/:batchId/supply-chain`** — Auth rules are your call (public slice vs logged-in vs same-company). Handler: upstream-only lineage closure from `:batchId`, then load all `transfers` for every batch id in that set. Response should include at least:
   - `batches` — one object per id (e.g. id, name, `companyId`, `registeringCompanyId` if you have it, blockchain summary).
   - `lineageEdges` — `{ sourceBatchId, derivedBatchId }` for every edge inside that closure.
   - `transfersByBatchId` — object keyed by batch id; each value is that batch’s transfer rows in chronological order.
@@ -58,7 +58,7 @@ No separate lineage or per-batch transfer routes unless you change your mind lat
 
 **Writing lineage (batch create)**
 
-Extend **`POST /batches`** with optional `sourceBatchIds` / `components`, or use a dedicated **`POST /batches/derived`**. That path creates the new `batches` row and is the only normal place you insert `batch_lineage` rows.
+Extend `**POST /batches`** with optional `sourceBatchIds` / `components`, or use a dedicated `**POST /batches/derived`**. That path creates the new `batches` row and is the only normal place you insert `batch_lineage` rows.
 
 The server does **not** infer lineage from transfers or from walking the graph. The client (or whoever calls the API) lists the existing batch ids that are inputs. For each id you accept, insert one row: `derived_batch_id` = new batch, `source_batch_id` = that input. Run your usual checks (rows exist, no self-reference, ownership rules, cycle sanity if you want).
 
