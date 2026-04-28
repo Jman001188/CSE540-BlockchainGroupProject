@@ -72,6 +72,34 @@ Retrieves a list of all registered companies.
 ]
 ```
 
+### Update Company Profile
+
+Updates the name of the company (Managers only, limited to their own company).
+
+- **Endpoint:** `PATCH /companies/:companyId`
+- **Auth Required:** Yes (Manager)
+
+**Request**
+
+```json
+{
+  "name": "New Company Name"
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "message": "Company profile updated successfully.",
+  "company": {
+    "companyId": "uuid",
+    "companyName": "New Company Name",
+    "walletAddress": "0xABC123..."
+  }
+}
+```
+
 ### Super Admin: Create Manager Token
 
 Bypasses manual SQL to instantly generate a manager registration token for a specific company (Internal Staff API).
@@ -336,7 +364,8 @@ Introduces a product lot and prepares blockchain interaction.
 ```json
 {
   "batchName": "string",
-  "batchDescription": "string"
+  "batchDescription": "string",
+  "sourceBatchIds": ["uuid1", "uuid2"]
 }
 ```
 
@@ -351,7 +380,7 @@ Introduces a product lot and prepares blockchain interaction.
   "blockchain": {
     "transactionId": "tx-hash-string",
     "status": "confirmed",
-    "ipfsHash": "IpfsHashHere..."
+    "dataHash": "hash-string"
   }
 }
 ```
@@ -376,6 +405,7 @@ Retrieves all batches owned by the authenticated user's company.
     "registeringCompanyName": "string",
     "registeringUserId": "uuid",
     "registeringUserName": "string",
+    "sourceBatchIds": ["uuid", "uuid"],
     "blockchain": {
       "transactionId": "tx-id",
       "status": "confirmed",
@@ -404,6 +434,7 @@ Public lookup for a specific batch.
   "registeringCompanyName": "string",
   "registeringUserId": "uuid",
   "registeringUserName": "string",
+  "sourceBatchIds": ["uuid", "uuid"],
   "blockchain": {
     "transactionId": "tx-id",
     "status": "confirmed",
@@ -522,7 +553,7 @@ graph LR
 
     subgraph Company_Management [🏢 Companies & System]
         direction LR
-        C_API["POST /company<br>GET /company/:id<br>GET /companies<br>GET / (Health Check)"]:::endpoint --> DB_COMP
+        C_API["POST /company<br>GET /company/:id<br>GET /companies<br>PATCH /companies/:companyId<br>GET / (Health Check)"]:::endpoint --> DB_COMP
     end
 
     subgraph Token_Management [🔑 Token Management]
@@ -545,6 +576,3 @@ graph LR
         TR_API["POST /transfers<br>GET /transfers<br>POST .../:id/complete<br>POST .../:id/reject"]:::endpoint --> DB_CHAIN
     end
 ```
-
-
-
