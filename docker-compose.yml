@@ -1,14 +1,18 @@
 services:
-  # Backend Service (Express.js)
   backend:
     build: ./backend
     ports:
       - "8080:8080"
     volumes:
       - ./backend:/app
+      - /app/node_modules
+      - ./blockchain/honest_harvest_hardhat_files/abi:/abi
+      - ./blockchain/honest_harvest_hardhat_files/deployments:/deployments
     environment:
       - PORT=8080
       - DATABASE_URL=postgres://user:password@db:5432/honest_harvest
+      - DOCKER_ENV=true
+      - RPC_URL=http://host.docker.internal:8545
     depends_on:
       - db
 

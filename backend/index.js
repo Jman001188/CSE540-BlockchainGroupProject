@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto'); 
 const jwt = require('jsonwebtoken'); 
 const db = require('./db'); 
+const fs = require('fs');
 require('dotenv').config();
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
@@ -11,18 +12,28 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 const { ethers } = require('ethers');
-const axios = require('axios');
-let contractABI;
-let contractAddress;
 
 try {
-    contractABI = require('../abi/SupplyChainContract.json');
-    const deployedData = require('../deployments/deployed-address.json');
-    contractAddress = deployedData.address;
+    const isDocker = process.env.DOCKER_ENV === 'true';
     
-    console.log(`✅ Smart Contract loaded automatically! Address: ${contractAddress}`);
+    // We only read the address file now, NOT the corrupted ABI file
+    const deployPath = isDocker 
+        ? '/deployments/deployed-address.json' 
+        : '../blockchain/honest_harvest_hardhat_files/deployments/deployed-address.json';
+
+    const deployedData = require(deployPath);
+    contractAddress = deployedData.address;
+
+    contractABI = [
+        "function registerItem(bytes32 dataHash) external returns (uint256)",
+        "function transferOwnership(uint256 itemID, address newOwner) external",
+        "function updateItemDataHash(uint256 itemID, bytes32 newDataHash) external"
+    ];
+    
+    console.log(`✅ Smart Contract loaded! Environment: ${isDocker ? 'Docker' : 'Local'}`);
+    console.log(`   Contract Address: ${contractAddress}`);
 } catch (err) {
-    console.warn("⚠️ Warning: Smart contract files not found. Did you run the Hardhat deployment script?");
+    console.warn("⚠️ Warning: Smart contract files not found.");
 }
 
 // Log a message on every connection
@@ -263,17 +274,13 @@ app.patch('/users/:userId', authenticateToken, async (req, res) => {
 // --- 3. CORE SUPPLY CHAIN & TRANSFERS ---
 
 // Register a New Batch
-// (DB + IPFS + Blockchain)
 app.post('/batches', authenticateToken, async (req, res) => {
     try {
-        const { batchName, batchDescription } = req.body;
-
-        // --- STEP 1: Save Initial 'Pending' State to Database ---
         const sql = `INSERT INTO batches (batch_name, batch_description, company_id, created_by, blockchain_status) 
                      VALUES ($1, $2, $3, $4, 'pending') RETURNING *`;
         const result = await db.query(sql, [
             req.body.batchName, 
-            req.body.batchDescription, 
+            req.body.batchDescription,
             req.user.companyId, 
             req.user.userId
         ]);
@@ -282,14 +289,13 @@ app.post('/batches', authenticateToken, async (req, res) => {
 
         // Create batch lineage and store in DB
         for (const derivedBatchId of req.body.derivedBatchIds) {
-            const sql = `INSERT INTO batch_lineage (new_batch_id, source_batch_id) VALUES ($1, $2) RETURNING *`;
-            await db.query(sql, [
+            const lineageSql = `INSERT INTO batch_lineage (new_batch_id, source_batch_id) VALUES ($1, $2) RETURNING *`;
+            await db.query(lineageSql, [
                 batch.batch_id, 
                 derivedBatchId, 
             ]);
         }
 
-        // Hash complete data
         const dataToHash = {
             batchId: batch.batch_id,
             batchName: batch.batch_name,
@@ -304,47 +310,25 @@ app.post('/batches', authenticateToken, async (req, res) => {
         const updateBatchSql = `UPDATE batches SET data_hash = $1 WHERE batch_id = $2`;
         await db.query(updateBatchSql, [dataHash, batch.batch_id]);
 
-        // TODO:
-        // Call smart contract to register batch.
-        // subscribe to blockchain event to update blockchain status once it's accepted on the chain
-
-        const dbResult = await db.query(sql, [batchName, batchDescription, req.user.companyId, req.user.userId]);
-        const batch = dbResult.rows[0];
-
-        // --- STEP 2: Upload Metadata to IPFS via Pinata ---
-        const ipfsPayload = {
-            name: batchName,
-            description: batchDescription,
-            creator: req.user.companyId,
-            timestamp: new Date().toISOString()
-        };
-
-        const pinataResponse = await axios.post('https://api.pinata.cloud/pinning/pinJSONToIPFS', ipfsPayload, {
-            headers: {
-                'pinata_api_key': process.env.PINATA_API_KEY,
-                'pinata_secret_api_key': process.env.PINATA_SECRET_KEY
-            }
-        });
-        
-        const ipfsCID = pinataResponse.data.IpfsHash; //'dataHash' string!
-
-        // --- STEP 3: Register on Smart Contract ---
         // Setup Ethers connection
         const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         const wallet = new ethers.Wallet(process.env.COMPANY_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(contractAddress, contractABI, wallet);
 
-        // Call the contract (Passing the DB batch_id and the IPFS string)
-        const tx = await contract.registerItem(batch.batch_id, ipfsCID);
+        // 1. Ethers needs bytes32 to start with "0x"
+        const bytes32Hash = "0x" + dataHash;
         
-        // Wait for the transaction to be mined
-        const receipt = await tx.wait(); 
+        console.log(`Sending to blockchain: Hash: ${bytes32Hash}`);
+        
+        // 2. Pass the hash, because the contract makes its own ID!
+        const tx = await contract.registerItem(bytes32Hash);
+        const receipt = await tx.wait();
 
-        // --- STEP 4: Update Database with Final Blockchain Data ---
-        const updateSql = `UPDATE batches 
-                           SET blockchain_status = 'confirmed', blockchain_tx_id = $1, data_hash = $2 
-                           WHERE batch_id = $3 RETURNING *`;
-        const finalResult = await db.query(updateSql, [receipt.hash, ipfsCID, batch.batch_id]);
+        // Update Database with Final Blockchain Data
+        const finalUpdateSql = `UPDATE batches 
+                                SET blockchain_status = 'confirmed', blockchain_tx_id = $1 
+                                WHERE batch_id = $2 RETURNING *`;
+        const finalResult = await db.query(finalUpdateSql, [receipt.hash, batch.batch_id]);
         const finalBatch = finalResult.rows[0];
 
         res.status(201).json({
@@ -355,13 +339,13 @@ app.post('/batches', authenticateToken, async (req, res) => {
             blockchain: {
                 transactionId: finalBatch.blockchain_tx_id,
                 status: finalBatch.blockchain_status,
-                ipfsHash: finalBatch.data_hash
+                dataHash: finalBatch.data_hash
             }
         });
 
     } catch (err) {
         console.error("Batch Creation Failed:", err);
-        res.status(500).json({ error: "Failed to fully register batch. Check logs for details." });
+        res.status(500).json({ error: err.message || "Failed to fully register batch." });
     }
 });
 
