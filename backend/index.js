@@ -263,13 +263,11 @@ app.post('/batches', authenticateToken, async (req, res) => {
         
         const batch = result.rows[0];
 
+        const sourceBatchIds = req.body.sourceBatchIds ?? [];
         // Create batch lineage and store in DB
-        for (const derivedBatchId of req.body.derivedBatchIds) {
-            const sql = `INSERT INTO batch_lineage (new_batch_id, source_batch_id) VALUES ($1, $2) RETURNING *`;
-            await db.query(sql, [
-                batch.batch_id, 
-                derivedBatchId, 
-            ]);
+        const insertLineageSql = `INSERT INTO batch_lineage (new_batch_id, source_batch_id) VALUES ($1, $2) RETURNING *`;
+        for (const sourceBatchId of sourceBatchIds) {
+            await db.query(insertLineageSql, [batch.batch_id, sourceBatchId]);
         }
 
         // Hash complete data
@@ -277,7 +275,7 @@ app.post('/batches', authenticateToken, async (req, res) => {
             batchId: batch.batch_id,
             batchName: batch.batch_name,
             batchDescription: batch.batch_description,
-            derivedBatches: req.body.derivedBatchIds,
+            sourceBatches: sourceBatchIds,
             companyId: batch.company_id,
             createdAt: batch.created_at
         };
@@ -311,7 +309,8 @@ app.post('/batches', authenticateToken, async (req, res) => {
 app.get('/batches', authenticateToken, async (req, res) => {
     try {
         const sql = `
-            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name 
+            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name,
+                (SELECT array_agg(source_batch_id) FROM batch_lineage WHERE new_batch_id = b.batch_id) AS source_batch_ids
             FROM batches b
             JOIN companies c ON b.company_id = c.company_id
             JOIN users u ON b.created_by = u.user_id
@@ -327,6 +326,7 @@ app.get('/batches', authenticateToken, async (req, res) => {
             registeringCompanyName: b.registering_company_name,
             registeringUserId: b.created_by,
             registeringUserName: b.registering_user_name,
+            sourceBatchIds: (b.source_batch_ids || []).map(String),
             blockchain: {
                 transactionId: b.blockchain_tx_id,
                 status: b.blockchain_status,
@@ -344,7 +344,8 @@ app.get('/batches', authenticateToken, async (req, res) => {
 app.get('/batches/:batchId', async (req, res) => {
     try {
         const sql = `
-            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name 
+            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name,
+                (SELECT array_agg(source_batch_id) FROM batch_lineage WHERE new_batch_id = b.batch_id) AS source_batch_ids
             FROM batches b
             JOIN companies c ON b.company_id = c.company_id
             JOIN users u ON b.created_by = u.user_id
@@ -363,6 +364,7 @@ app.get('/batches/:batchId', async (req, res) => {
             registeringCompanyName: b.registering_company_name,
             registeringUserId: b.created_by,
             registeringUserName: b.registering_user_name,
+            sourceBatchIds: (b.source_batch_ids || []).map(String),
             blockchain: {
                 transactionId: b.blockchain_tx_id,
                 status: b.blockchain_status,
