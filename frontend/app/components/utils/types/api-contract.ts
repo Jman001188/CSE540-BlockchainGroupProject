@@ -91,6 +91,7 @@ export interface CreateBatchResponse {
   batchDescription: string;
   createdAt: ISODateString;
   blockchain: {
+    blockchainBatchId: number | null;
     transactionId: string | null;
     status: BatchBlockchainStatus;
   };
@@ -130,7 +131,5 @@ export interface LineageEdge {
 export interface SupplyChainHistoryResponse {
   batches: BatchModel[];
   lineageEdges: LineageEdge[];
-  transfersByBatchId: {
-    [key: Uuid]: TransferModel[];
-  };
+  transfers: TransferModel[];
 }

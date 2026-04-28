@@ -24,6 +24,7 @@ export type TransferBlockchainStatus =
   | "transfer failed";
 
 export interface BatchBlockchainInfo {
+  blockchainBatchId?: number | null;
   transactionId: string | null;
   status: BatchBlockchainStatus;
   dataHash?: string | null;

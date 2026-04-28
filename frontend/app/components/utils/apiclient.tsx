@@ -250,7 +250,7 @@ export const BatchAPI = {
 
     // Get the supply chain history of a batch
     getSupplyChainHistory: async (id: Uuid): Promise<SupplyChainHistoryResponse> => {
-        const response = await fetch(`${API}/batches/${id}/supply-chain`, {
+        const response = await fetch(`${API}/batchhistory/${id}`, {
             method: "GET",
         });
 

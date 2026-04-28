@@ -47,8 +47,10 @@ export interface BatchModel {
   registeringCompanyName: string;
   registeringUserId: Uuid;
   registeringUserName: string;
+  varifiedDataOnChain?: boolean;
   sourceBatchIds?: Uuid[];
   blockchain: {
+    blockchainBatchId: number | null;
     transactionId: string | null;
     status: BatchBlockchainStatus;
     dataHash: string | null;
@@ -67,6 +69,7 @@ export interface TransferModel {
   senderUserName: string;
   receivingUserId: Uuid | null;
   receivingUserName: string | null;
+  varifiedTransferOnChain?: boolean;
   status: TransferLifecycleStatus;
   blockchain: TransferBlockchainInfo;
   createdAt: ISODateString;
@@ -82,6 +85,7 @@ export interface BatchQrModel {
   registeringUserId: Uuid;
   registeringUserName: string;
   blockchain: {
+    blockchainBatchId: number | null;
     transactionId: string | null;
     status: BatchBlockchainStatus;
     dataHash: string | null;
