@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS transfers (
     sender_user_id UUID REFERENCES users(user_id),
     receiving_user_id UUID REFERENCES users(user_id),
     status TEXT CHECK (status IN ('pending', 'accepted', 'rejected', 'completed')) DEFAULT 'pending',
+    data_hash TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     completed_at TIMESTAMP,
     blockchain_tx_id TEXT,
