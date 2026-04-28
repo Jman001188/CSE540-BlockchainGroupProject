@@ -47,6 +47,7 @@ export interface BatchModel {
   registeringCompanyName: string;
   registeringUserId: Uuid;
   registeringUserName: string;
+  sourceBatchIds?: Uuid[];
   blockchain: {
     transactionId: string | null;
     status: BatchBlockchainStatus;
