@@ -1,9 +1,10 @@
 ﻿const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto'); // Used for generating secure registration tokens
+const crypto = require('crypto'); 
 const jwt = require('jsonwebtoken'); 
 const db = require('./db'); 
+const fs = require('fs');
 require('dotenv').config();
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
@@ -11,6 +12,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 const { ethers } = require('ethers');
+
+try {
+    const isDocker = process.env.DOCKER_ENV === 'true';
+    
+    // We only read the address file now, NOT the corrupted ABI file
+    const deployPath = isDocker 
+        ? '/deployments/deployed-address.json' 
+        : '../blockchain/honest_harvest_hardhat_files/deployments/deployed-address.json';
+
+    const deployedData = require(deployPath);
+    contractAddress = deployedData.address;
+
+    contractABI = [
+        "function registerItem(bytes32 dataHash) external returns (uint256)",
+        "function transferOwnership(uint256 itemID, address newOwner) external",
+        "function updateItemDataHash(uint256 itemID, bytes32 newDataHash) external"
+    ];
+    
+    console.log(`✅ Smart Contract loaded! Environment: ${isDocker ? 'Docker' : 'Local'}`);
+    console.log(`   Contract Address: ${contractAddress}`);
+} catch (err) {
+    console.warn("⚠️ Warning: Smart contract files not found.");
+}
 
 // Log a message on every connection
 app.use((req, res, next) => {
@@ -256,7 +280,7 @@ app.post('/batches', authenticateToken, async (req, res) => {
                      VALUES ($1, $2, $3, $4, 'pending') RETURNING *`;
         const result = await db.query(sql, [
             req.body.batchName, 
-            req.body.batchDescription, 
+            req.body.batchDescription,
             req.user.companyId, 
             req.user.userId
         ]);
@@ -270,7 +294,6 @@ app.post('/batches', authenticateToken, async (req, res) => {
             await db.query(insertLineageSql, [batch.batch_id, sourceBatchId]);
         }
 
-        // Hash complete data
         const dataToHash = {
             batchId: batch.batch_id,
             batchName: batch.batch_name,
@@ -285,23 +308,42 @@ app.post('/batches', authenticateToken, async (req, res) => {
         const updateBatchSql = `UPDATE batches SET data_hash = $1 WHERE batch_id = $2`;
         await db.query(updateBatchSql, [dataHash, batch.batch_id]);
 
-        // TODO:
-        // Call smart contract to register batch.
-        // subscribe to blockchain event to update blockchain status once it's accepted on the chain
+        // Setup Ethers connection
+        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+        const wallet = new ethers.Wallet(process.env.COMPANY_PRIVATE_KEY, provider);
+        const contract = new ethers.Contract(contractAddress, contractABI, wallet);
+
+        // 1. Ethers needs bytes32 to start with "0x"
+        const bytes32Hash = "0x" + dataHash;
+        
+        console.log(`Sending to blockchain: Hash: ${bytes32Hash}`);
+        
+        // 2. Pass the hash, because the contract makes its own ID!
+        const tx = await contract.registerItem(bytes32Hash);
+        const receipt = await tx.wait();
+
+        // Update Database with Final Blockchain Data
+        const finalUpdateSql = `UPDATE batches 
+                                SET blockchain_status = 'confirmed', blockchain_tx_id = $1 
+                                WHERE batch_id = $2 RETURNING *`;
+        const finalResult = await db.query(finalUpdateSql, [receipt.hash, batch.batch_id]);
+        const finalBatch = finalResult.rows[0];
 
         res.status(201).json({
-            batchId: batch.batch_id,
-            batchName: batch.batch_name,
-            batchDescription: batch.batch_description,
-            createdAt: batch.created_at,
+            batchId: finalBatch.batch_id,
+            batchName: finalBatch.batch_name,
+            batchDescription: finalBatch.batch_description,
+            createdAt: finalBatch.created_at,
             blockchain: {
-                transactionId: batch.blockchain_tx_id,
-                status: batch.blockchain_status
+                transactionId: finalBatch.blockchain_tx_id,
+                status: finalBatch.blockchain_status,
+                dataHash: finalBatch.data_hash
             }
         });
+
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to create batch" });
+        console.error("Batch Creation Failed:", err);
+        res.status(500).json({ error: err.message || "Failed to fully register batch." });
     }
 });
 
