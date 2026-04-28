@@ -1,15 +1,13 @@
-"use client";
-import { useRouter } from "next/navigation";
+import ProtectedRoute from "@/app/components/global/ProtectedRoute";
+import CompanyProfile from "@/app/components/home/CompanyProfile";
 
+export default function CompanyProfilePath() {
 
-
-export default function CompanyProfile() {
-const router = useRouter();
 
   return (
-    <div>
-        <button onClick={() => router.push("/home")}>Back</button><hr/><br/>
-        Company Profile<br/><br/>
-    </div>
+    <ProtectedRoute>
+      <CompanyProfile />
+    </ProtectedRoute>
+    
   );
 }

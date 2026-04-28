@@ -2,274 +2,577 @@
 
 **Base URL:** `http://localhost:8080`
 
-All endpoints accept and return JSON. If an endpoint requires authentication, you must include the JWT Session Token in the headers as: `Authorization: Bearer <your_token>`.
+All endpoints accept and return JSON. For authenticated routes, pass the JWT as `"sessionToken"` in the body or `Authorization: Bearer <token>` in the headers. Identity is strictly derived from the validated token.
 
 ---
 
-## 🏢 1. Company Management
+## 🏢 0. Utility, Admin & Company Management
 
 ### Create a Company
+
 Creates a new organization in the supply chain network.
-* **Endpoint:** `POST /company`
-* **Auth Required:** No
-* **Request Input (Body):**
-  ```json
-  {
-    "name": "",
-    "permission_level": ""
-  }
-  ```
-* **Response Output (201 Created):**
-  ```json
-  {
-    "company_id": "",
-    "name": "",
-    "permission_level": "",
-    "created_at": ""
-  }
-  ```
+
+- **Endpoint:** `POST /company`
+- **Auth Required:** No
+
+**Request**
+
+```json
+{
+  "name": "string"
+}
+```
+
+**Response (201)**
+
+```json
+{
+  "company_id": "uuid",
+  "name": "string",
+  "wallet_address": "0xABC123...",
+  "created_at": "timestamp"
+}
+```
 
 ### Get Company Details
+
 Fetches public details for a specific company.
-* **Endpoint:** `GET /company/:companyId`
-* **Auth Required:** No
-* **Request Input:** `companyId` (URL Parameter)
-* **Response Output (200 OK):**
-  ```json
+
+- **Endpoint:** `GET /company/:companyId`
+- **Auth Required:** No
+
+**Response (200)**
+
+```json
+{
+  "company_id": "uuid",
+  "name": "string",
+  "wallet_address": "0xABC123...",
+  "created_at": "timestamp"
+}
+```
+
+### Get All Companies
+
+Retrieves a list of all registered companies.
+
+- **Endpoint:** `GET /companies`
+- **Auth Required:** No
+
+**Response (200)**
+
+```json
+[
   {
-    "company_id": "",
-    "name": "",
-    "permission_level": "",
-    "created_at": ""
+    "company_id": "uuid",
+    "name": "string",
+    "wallet_address": "0xABC123...",
+    "created_at": "timestamp"
   }
-  ```
+]
+```
+
+### Update Company Profile
+
+Updates the name of the company (Managers only, limited to their own company).
+
+- **Endpoint:** `PATCH /companies/:companyId`
+- **Auth Required:** Yes (Manager)
+
+**Request**
+
+```json
+{
+  "name": "New Company Name"
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "message": "Company profile updated successfully.",
+  "company": {
+    "companyId": "uuid",
+    "companyName": "New Company Name",
+    "walletAddress": "0xABC123..."
+  }
+}
+```
+
+### Super Admin: Create Manager Token
+
+Bypasses manual SQL to instantly generate a manager registration token for a specific company (Internal Staff API).
+
+- **Endpoint:** `POST /auth/admin/manager-token`
+- **Auth Required:** No
+
+**Request**
+
+```json
+{
+  "companyId": "uuid",
+  "userEmail": "admin@example.com"
+}
+```
+
+**Response (201)**
+
+```json
+{
+  "registrationTokenId": "uuid",
+  "registrationToken": "hex-string"
+}
+```
+
+### System Health Check
+
+- **Endpoint:** `GET /`
+- **Auth Required:** No
+
+**Response (200)**
+
+```text
+The Honest Harvest API is running!
+```
 
 ---
 
-## 🔐 2. Users & Authentication
+## 🔐 1. Users & Authentication
 
-### Register a User
-Creates a secure user profile and links it to a company.
-* **Endpoint:** `POST /auth/register`
-* **Auth Required:** No
-* **Request Input (Body):**
-  ```json
+### Create Registration Token
+
+Creates a secure token allowing a new user to join the manager's company.
+
+- **Endpoint:** `POST /auth/registration-tokens`
+- **Auth Required:** Yes (Manager)
+
+**Request**
+
+```json
+{
+  "userEmail": "new@example.com",
+  "role": "user" 
+}
+```
+
+*(Role can be "user" or "manager")*
+
+**Response (201)**
+
+```json
+{
+  "registrationTokenId": "uuid",
+  "registrationToken": "hex-string"
+}
+```
+
+### Revoke Registration Token
+
+Invalidates a pending token.
+
+- **Endpoint:** `POST /auth/registration-tokens/:id/revoke`
+- **Auth Required:** Yes (Manager)
+
+**Response (200)**
+
+```json
+{
+  "registration_token_id": "uuid",
+  "status": "revoked"
+}
+```
+
+### Get Registration Token List
+
+Retrieves all registration tokens for the manager's company.
+
+- **Endpoint:** `GET /auth/registration-tokens/token-list`
+- **Auth Required:** Yes (Manager)
+
+**Response (200)**
+
+```json
+[
   {
-    "email": "",
-    "password": "",
-    "companyId": "",
-    "firstName": "",
-    "lastName": "",
-    "role": ""
+    "tokenId": "uuid",
+    "registrationToken": "hex-string",
+    "email": "user@example.com",
+    "companyId": "uuid",
+    "companyName": "string",
+    "role": "user",
+    "status": "pending",
+    "createdAt": "timestamp",
+    "createdById": "uuid",
+    "createdByName": "string"
   }
-  ```
-* **Response Output (201 Created):**
-  ```json
-  {
-    "userId": "",
-    "registrationToken": ""
-  }
-  ```
+]
+```
+
+### Get Registration Token Details
+
+Public lookup to pre-fill registration forms.
+
+- **Endpoint:** `POST /auth/registration-tokens/token`
+- **Auth Required:** No
+
+**Request**
+
+```json
+{
+  "registrationToken": "hex-string"
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "tokenId": "uuid",
+  "registrationToken": "hex-string",
+  "email": "user@example.com",
+  "companyId": "uuid",
+  "companyName": "string",
+  "role": "user",
+  "status": "pending",
+  "createdAt": "timestamp",
+  "createdById": "uuid",
+  "createdByName": "string"
+}
+```
+
+### Register User
+
+Consumes a pending token to create a user account.
+
+- **Endpoint:** `POST /auth/register`
+- **Auth Required:** No
+
+**Request**
+
+```json
+{
+  "registrationToken": "string",
+  "password": "string",
+  "firstName": "string",
+  "lastName": "string"
+}
+```
+
+**Response (201)**
+
+```json
+{
+  "message": "Registration successful."
+}
+```
 
 ### User Login
-Authenticates a user and generates a JWT session token.
-* **Endpoint:** `POST /auth/login`
-* **Auth Required:** No
-* **Request Input (Body):**
-  ```json
-  {
-    "email": "",
-    "password": ""
+
+Authenticates credentials (email is case-insensitive) and returns the JWT.
+
+- **Endpoint:** `POST /auth/login`
+- **Auth Required:** No
+
+**Request**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "string"
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "sessionToken": "jwt-string",
+  "expiresIn": "24 hours",
+  "user": {
+    "userId": "uuid",
+    "firstName": "string",
+    "lastName": "string",
+    "email": "user@example.com",
+    "role": "manager"
+  },
+  "company": {
+    "companyId": "uuid",
+    "companyName": "string",
+    "walletAddress": "0xABC123..."
   }
-  ```
-* **Response Output (200 OK):**
-  ```json
-  {
-    "sessionToken": "eyJhbGciOiJIUzI1NiIs...",
-    "user": {
-      "userID": "",
-      "firstName": "",
-      "lastName": "",
-      "role": ""
-    },
-    "company": {
-      "companyID": "",
-      "companyName": "",
-      "permission": ""
-    }
-  }
-  ```
+}
+```
+
+### User Logout
+
+Ends a user session (client-side token deletion).
+
+- **Endpoint:** `POST /auth/logout`
+- **Auth Required:** Yes
+
+**Response (200)**
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
 
 ### Update User Profile
-Updates basic profile information.
-* **Endpoint:** `PATCH /user/:userId`
-* **Auth Required:** No *(Should be added later)*
-* **Request Input (URL Parameter + Body):**
-  ```json
-  {
-    "firstName": "",
-    "lastName": ""
+
+Updates basic profile information (self-edit only).
+
+- **Endpoint:** `PATCH /users/:userId`
+- **Auth Required:** Yes
+
+**Request**
+
+```json
+{
+  "firstName": "NewFirst",
+  "lastName": "NewLast"
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "user": {
+    "userId": "uuid",
+    "firstName": "NewFirst",
+    "lastName": "NewLast",
+    "role": "user"
   }
-  ```
-* **Response Output (200 OK):**
-  ```json
-  {
-    "user_id": "",
-    "public_key": null,
-    "username": null,
-    "email": "",
-    "password_hash": "",
-    "first_name": "",
-    "last_name": "",
-    "role": "",
-    "company_id": "",
-    "created_at": ""
-  }
-  ```
+}
+```
 
 ---
 
-## 📦 3. Core Supply Chain & Transfers
+## 📦 2. Core Supply Chain (Batches)
 
 ### Register a New Batch
-Logs a new physical product onto the network.
-* **Endpoint:** `POST /api/batches`
-* **Auth Required:** **Yes (Bearer Token)**
-* **Request Input (Body):**
-  ```json
-  {
-    "batchId": "",
-    "productName": "",
-    "originLocation": ""
-  }
-  ```
-* **Response Output (201 Created):**
-  ```json
-  {
-    "batch_id": "",
-    "product_name": "",
-    "origin_location": "",
-    "ipfs_hash": null,
-    "created_at": ""
-  }
-  ```
 
-### Initiate a Pending Transfer
-Requests to hand off a batch from one company to another.
-* **Endpoint:** `POST /transfers/pending`
-* **Auth Required:** No *(Should be added later)*
-* **Request Input (Body):**
-  ```json
-  {
-    "batchId": "",
-    "fromCompany": "",
-    "toCompany": "",
-    "senderId": ""
-  }
-  ```
-* **Response Output (200 OK):**
-  ```json
-  {
-    "id": "",
-    "batch_id": "",
-    "from_company": "",
-    "to_company": "",
-    "sender_id": "",
-    "status": "",
-    "completed_at": null,
-    "created_at": ""
-  }
-  ```
+Introduces a product lot and prepares blockchain interaction.
 
-### Accept a Transfer
-Completes the hand-off (triggers the blockchain transaction).
-* **Endpoint:** `POST /transfers/:transferId/accept`
-* **Auth Required:** No *(Should be added later)*
-* **Request Input:** `transferId` (URL Parameter)
-* **Response Output (200 OK):**
-  ```json
+- **Endpoint:** `POST /batches`
+- **Auth Required:** Yes
+
+**Request**
+
+```json
+{
+  "batchName": "string",
+  "batchDescription": "string",
+  "sourceBatchIds": ["uuid1", "uuid2"]
+}
+```
+
+**Response (201)**
+
+```json
+{
+  "batchId": "uuid",
+  "batchName": "string",
+  "batchDescription": "string",
+  "createdAt": "timestamp",
+  "blockchain": {
+    "transactionId": "tx-hash-string",
+    "status": "confirmed",
+    "dataHash": "hash-string"
+  }
+}
+```
+
+### Get Batch List
+
+Retrieves all batches owned by the authenticated user's company.
+
+- **Endpoint:** `GET /batches`
+- **Auth Required:** Yes
+
+**Response (200)**
+
+```json
+[
   {
-    "message": "",
-    "data": {
-      "id": "",
-      "batch_id": "",
-      "from_company": "",
-      "to_company": "",
-      "sender_id": "",
-      "status": "accepted",
-      "completed_at": "",
-      "created_at": ""
+    "batchId": "uuid",
+    "batchName": "string",
+    "batchDescription": "string",
+    "createdAt": "timestamp",
+    "registeringCompanyId": "uuid",
+    "registeringCompanyName": "string",
+    "registeringUserId": "uuid",
+    "registeringUserName": "string",
+    "sourceBatchIds": ["uuid", "uuid"],
+    "blockchain": {
+      "transactionId": "tx-id",
+      "status": "confirmed",
+      "dataHash": "hash"
     }
   }
-  ```
+]
+```
+
+### Get Batch Details
+
+Public lookup for a specific batch.
+
+- **Endpoint:** `GET /batches/:batchId`
+- **Auth Required:** No
+
+**Response (200)**
+
+```json
+{
+  "batchId": "uuid",
+  "batchName": "string",
+  "batchDescription": "string",
+  "createdAt": "timestamp",
+  "registeringCompanyId": "uuid",
+  "registeringCompanyName": "string",
+  "registeringUserId": "uuid",
+  "registeringUserName": "string",
+  "sourceBatchIds": ["uuid", "uuid"],
+  "blockchain": {
+    "transactionId": "tx-id",
+    "status": "confirmed",
+    "dataHash": "hash"
+  }
+}
+```
+
+---
+
+## 🚚 3. Transfers
+
+### Initiate Transfer
+
+Creates a pending request to move a batch. Locks the batch.
+
+- **Endpoint:** `POST /transfers`
+- **Auth Required:** Yes (Sender)
+
+**Request**
+
+```json
+{
+  "batchId": "uuid",
+  "toCompanyId": "uuid",
+  "receivingUserId": "uuid"
+}
+```
+
+**Response (201)**
+
+```json
+{
+  "transferId": "uuid",
+  "batchId": "uuid",
+  "fromCompanyId": "uuid",
+  "toCompanyId": "uuid",
+  "senderUserId": "uuid",
+  "receivingUserId": "uuid",
+  "createdAt": "timestamp",
+  "status": "pending"
+}
+```
+
+### Get Transfer List
+
+Fetches transfers involving the authenticated user's company.
+
+- **Endpoint:** `GET /transfers`
+- **Auth Required:** Yes
+
+**Response (200)**
+
+```json
+[
+  {
+    "transferId": "uuid",
+    "batchId": "uuid",
+    "batchName": "string",
+    "fromCompanyId": "uuid",
+    "fromCompanyName": "string",
+    "toCompanyId": "uuid",
+    "toCompanyName": "string",
+    "senderUserId": "uuid",
+    "senderUserName": "string",
+    "receivingUserId": "uuid",
+    "receivingUserName": "string",
+    "status": "pending",
+    "createdAt": "timestamp"
+  }
+]
+```
+
+### Complete Transfer
+
+Finalizes transfer, shifts ownership, triggers smart contract.
+
+- **Endpoint:** `POST /transfers/:transferId/complete`
+- **Auth Required:** Yes (Receiver)
+
+**Response (200)**
+
+```json
+{
+  "message": "Accepted Transfer."
+}
+```
+
+### Reject Transfer
+
+Declines transfer, unlocking the batch for the sender.
+
+- **Endpoint:** `POST /transfers/:transferId/reject`
+- **Auth Required:** Yes (Receiver)
+
+**Response (200)**
+
+```json
+{
+  "message": "Rejected Transfer."
+}
+```
 
 ---
 
 ## 🗺️ API Architecture Flow
 
-This flowchart shows how data moves through the Honest Harvest system. 
-
 ```mermaid
 graph LR
-    %% Styling
     classDef endpoint fill:#2b3a42,stroke:#5c8397,stroke-width:2px,color:#fff,rx:5px,ry:5px;
-    classDef input fill:#eef2f5,stroke:#b0c4de,stroke-width:1px,color:#333;
-    classDef output fill:#d4edda,stroke:#28a745,stroke-width:1px,color:#155724;
     classDef db fill:#fdfd96,stroke:#ffb347,stroke-width:2px,color:#333,shape:cylinder;
 
-    %% Databases
     DB_COMP[(Companies DB)]:::db
-    DB_USER[(Users DB)]:::db
+    DB_USER[(Users/Tokens DB)]:::db
     DB_CHAIN[(Supply Chain DB)]:::db
 
-    subgraph Group1 [Company Management]
+    subgraph Company_Management [🏢 Companies & System]
         direction LR
-        C_IN["Input: {name, permission}"]:::input --> POST_COMP["POST /company"]:::endpoint
-        POST_COMP --> DB_COMP
-        DB_COMP --> C_OUT["Output: {company_id, ...}"]:::output
-
-        G_IN["Input: URL param :companyId"]:::input --> GET_COMP["GET /company/:companyId"]:::endpoint
-        GET_COMP --> DB_COMP
-        DB_COMP --> G_OUT["Output: {Company Details}"]:::output
+        C_API["POST /company<br>GET /company/:id<br>GET /companies<br>PATCH /companies/:companyId<br>GET / (Health Check)"]:::endpoint --> DB_COMP
     end
 
-    subgraph Group2 [Users and Authentication]
+    subgraph Token_Management [🔑 Token Management]
         direction LR
-        R_IN["Input: {email, password, companyId...}"]:::input --> POST_REG["POST /auth/register"]:::endpoint
-        POST_REG --> DB_USER
-        DB_USER --> R_OUT["Output: {userId, token}"]:::output
-
-        L_IN["Input: {email, password}"]:::input --> POST_LOG["POST /auth/login"]:::endpoint
-        POST_LOG --> DB_USER
-        DB_USER --> L_OUT["Output: {sessionToken, User Profile}"]:::output
-
-        U_IN["Input: URL :userId<br>Body: {firstName, lastName}"]:::input --> PATCH_USR["PATCH /user/:userId"]:::endpoint
-        PATCH_USR --> DB_USER
-        DB_USER --> U_OUT["Output: {Updated User Profile}"]:::output
-
-        LEG_IN["Input: {public_key, username...}"]:::input --> POST_LEG["POST /api/users/register<br>(Legacy Basic)"]:::endpoint
-        POST_LEG --> DB_USER
-        DB_USER --> LEG_OUT["Output: {Basic User}"]:::output
+        T_API["POST /auth/registration-tokens<br>POST .../:id/revoke<br>GET .../token-list<br>POST /auth/admin/manager-token"]:::endpoint --> DB_USER
     end
 
-    subgraph Group3 [Supply Chain and Transfers]
+    subgraph User_Auth [🔐 Users & Authentication]
         direction LR
-        B_IN["Auth: Bearer Token<br>Input: {batchId...}"]:::input --> POST_BATCH["POST /api/batches"]:::endpoint
-        POST_BATCH --> DB_CHAIN
-        DB_CHAIN --> B_OUT["Output: {Batch Details}"]:::output
-
-        T_IN["Input: {batchId, from, to, sender}"]:::input --> POST_TRANS["POST /transfers/pending"]:::endpoint
-        POST_TRANS --> DB_CHAIN
-        DB_CHAIN --> T_OUT["Output: {Pending Transfer}"]:::output
-
-        A_IN["Input: URL param :transferId"]:::input --> POST_ACC["POST /transfers/:id/accept"]:::endpoint
-        POST_ACC --> DB_CHAIN
-        DB_CHAIN --> A_OUT["Output: {Accepted Status}"]:::output
+        U_API["POST /auth/register<br>POST /auth/login<br>POST /auth/logout<br>PATCH /users/:userId<br>POST .../token (Lookup)"]:::endpoint --> DB_USER
     end
 
-    subgraph Group4 [System]
+    subgraph Supply_Chain [📦 Batches]
         direction LR
-        H_IN["Input: None"]:::input --> GET_HLTH["GET /"]:::endpoint
-        GET_HLTH --> H_OUT["Output: 'Honest Harvest API is running!'"]:::output
+        B_API["POST /batches<br>GET /batches<br>GET /batches/:batchId"]:::endpoint --> DB_CHAIN
+    end
+
+    subgraph Transfer_Flow [🚚 Transfers]
+        direction LR
+        TR_API["POST /transfers<br>GET /transfers<br>POST .../:id/complete<br>POST .../:id/reject"]:::endpoint --> DB_CHAIN
     end
 ```
