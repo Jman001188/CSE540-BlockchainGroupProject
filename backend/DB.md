@@ -60,7 +60,8 @@ Represents physical product lots registered on the system and the blockchain.
 | `blockchain_batch_id` | `BIGINT` | `UNIQUE`, `NULL` | The ID assigned by the Smart Contract. |
 | `batch_name` | `TEXT` | `NOT NULL` | Human-readable product name. |
 | `batch_description`| `TEXT` | `NULL` | Details about the batch contents. |
-| `company_id` | `UUID` | **FOREIGN KEY** | The *current* owning company `companies(company_id)`. |
+| `registering_company_id` | `UUID` | **FOREIGN KEY** | Company that registered the batch `companies(company_id)`. |
+| `current_company_id` | `UUID` | **FOREIGN KEY** | Company that currently holds the batch `companies(company_id)`. |
 | `created_by` | `UUID` | **FOREIGN KEY** | The user who originally minted it `users(user_id)`. |
 | `created_at` | `TIMESTAMP` | `DEFAULT NOW()` | Record creation timestamp. |
 | `blockchain_tx_id`| `TEXT` | `NULL` | Transaction hash from Ethereum. |
@@ -113,7 +114,7 @@ This diagram maps how SQL tables are linked together via Primary Keys (PK) and F
 erDiagram
     COMPANIES ||--o{ USERS : "employs"
     COMPANIES ||--o{ REGISTRATION_TOKENS : "issues"
-    COMPANIES ||--o{ BATCHES : "currently owns"
+    COMPANIES ||--o{ BATCHES : "registered / holds"
     COMPANIES ||--o{ TRANSFERS : "sends/receives"
     
     USERS ||--o{ REGISTRATION_TOKENS : "created by"
@@ -153,7 +154,8 @@ erDiagram
         UUID batch_id PK
         BIGINT blockchain_batch_id UK
         TEXT batch_name
-        UUID company_id FK
+        UUID registering_company_id FK
+        UUID current_company_id FK
         UUID created_by FK
         TEXT blockchain_status
     }

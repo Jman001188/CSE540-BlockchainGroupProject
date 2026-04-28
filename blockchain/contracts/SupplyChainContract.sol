@@ -50,9 +50,9 @@ contract SupplyChainContract {
     );
 
     event OwnershipTransferred(
-        uint256 indexed itemID,
         address indexed from,
-        address indexed to
+        address indexed to,
+        bytes32 transferHash
     );
 
     event ItemDataHashUpdated(
@@ -60,6 +60,14 @@ contract SupplyChainContract {
         bytes32 indexed oldDataHash,
         bytes32 indexed newDataHash
     );
+
+    struct TransferProof {
+        address from;
+        address to;
+        bytes32 transferHash;
+    }
+
+    mapping(uint256 => TransferProof[]) private transferData;
 
     modifier itemExists(uint256 itemID) {
         require(items[itemID].exists, "Item does not exist");
@@ -105,15 +113,20 @@ contract SupplyChainContract {
     */
     function transferOwnership(
         uint256 itemID,
-        address newOwner
+        address newOwner,
+        bytes32 transferHash
     ) external itemExists(itemID) onlyOwner(itemID) {
         require(newOwner != address(0), "Invalid new owner");
         require(newOwner != items[itemID].owner, "Already owner");
+        require(transferHash != bytes32(0), "Invalid transfer hash");
 
         address previousOwner = items[itemID].owner;
         items[itemID].owner = newOwner;
 
-        emit OwnershipTransferred(itemID, previousOwner, newOwner);
+        transferData[itemID].push(
+            TransferProof(previousOwner, newOwner, transferHash)
+        );
+        emit OwnershipTransferred(previousOwner, newOwner, transferHash);
     }
 
     /*
@@ -175,6 +188,21 @@ contract SupplyChainContract {
         uint256 itemID
     ) external view itemExists(itemID) returns (bytes32) {
         return items[itemID].dataHash;
+    }
+
+    // GEt transfer data hash for a batch ID at a given index
+    function getTransferDataHash(
+        uint256 itemID
+    ) external view itemExists(itemID) returns (bytes32[] memory) {
+        TransferProof[] storage proofs = transferData[itemID];
+
+        bytes32[] memory hashes = new bytes32[](proofs.length);
+
+        for (uint256 i = 0; i < proofs.length; i++) {
+            hashes[i] = proofs[i].transferHash;
+        }
+
+        return hashes;
     }
 
     /*

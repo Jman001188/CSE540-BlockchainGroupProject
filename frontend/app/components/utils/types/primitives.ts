@@ -31,8 +31,8 @@ export interface BatchBlockchainInfo {
 }
 
 export interface TransferBlockchainInfo {
-  transactionId: string | null;
-  status: TransferBlockchainStatus | null;
+  status?: TransferBlockchainStatus | null;
+  dataHash?: string | null;
 }
 
 export interface JwtPayload {

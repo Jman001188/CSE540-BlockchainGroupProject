@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto'); 
@@ -26,10 +26,11 @@ try {
 
     contractABI = [
         "function registerItem(bytes32 dataHash) external returns (uint256)",
-        "function transferOwnership(uint256 itemID, address newOwner) external",
+        "function transferOwnership(uint256 itemID, address newOwner, bytes32 transferHash) external",
         "function updateItemDataHash(uint256 itemID, bytes32 newDataHash) external",
         "function getItemDataHash(uint256 itemID) external view returns (bytes32)",
-        "event ItemRegistered(uint256 indexed itemID, address indexed owner, bytes32 dataHash)"
+        "event ItemRegistered(uint256 indexed itemID, address indexed owner, bytes32 dataHash)",
+        "event OwnershipTransferred(address indexed from, address indexed to, bytes32 transferHash)"
     ];
     
     console.log(`✅ Smart Contract loaded! Environment: ${isDocker ? 'Docker' : 'Local'}`);
@@ -278,13 +279,14 @@ app.patch('/users/:userId', authenticateToken, async (req, res) => {
 // Register a New Batch
 app.post('/batches', authenticateToken, async (req, res) => {
     try {
-        const sql = `INSERT INTO batches (batch_name, batch_description, company_id, created_by, blockchain_status) 
-                     VALUES ($1, $2, $3, $4, 'pending') RETURNING *`;
+        const sql = `INSERT INTO batches (batch_name, batch_description, registering_company_id, created_by, current_company_id, blockchain_status) 
+                     VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING *`;
         const result = await db.query(sql, [
             req.body.batchName, 
             req.body.batchDescription,
-            req.user.companyId, 
-            req.user.userId
+            req.user.companyId,
+            req.user.userId,
+            req.user.companyId
         ]);
         
         const batch = result.rows[0];
@@ -302,14 +304,10 @@ app.post('/batches', authenticateToken, async (req, res) => {
             batchName: batch.batch_name,
             batchDescription: batch.batch_description,
             sourceBatches: normalizedSourceBatchIds,
-            companyId: batch.company_id,
+            companyId: batch.registering_company_id,
             createdAt: batch.created_at
         };
         const dataHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
-
-        // Store Hashed data in DB
-        const updateBatchSql = `UPDATE batches SET data_hash = $1 WHERE batch_id = $2`;
-        await db.query(updateBatchSql, [dataHash, batch.batch_id]);
 
         // Setup Ethers connection
         const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
@@ -337,30 +335,17 @@ app.post('/batches', authenticateToken, async (req, res) => {
         if (!registrationEvent) {
             throw new Error("registerItem succeeded but ItemRegistered event was not found.");
         }
-
+        console.log(`Batch Name: ${batch.batch_name}`);
+        console.log(`Blockchain Batch ID: ${registrationEvent.args.itemID}`);
         const blockchainBatchId = Number(registrationEvent.args.itemID);
 
         // Update Database with Final Blockchain Data
-        const finalResult = await db.query(
-            `UPDATE batches 
-             SET blockchain_status = 'confirmed', blockchain_tx_id = $1, blockchain_batch_id = $2 
-             WHERE batch_id = $3 RETURNING *`,
-            [receipt.hash, blockchainBatchId, batch.batch_id]
-        );
-        const finalBatch = finalResult.rows[0];
+        const finalUpdateSql = `UPDATE batches 
+             SET blockchain_status = 'confirmed', blockchain_batch_id = $1, data_hash = $2
+             WHERE batch_id = $3 RETURNING *`;
+        await db.query(finalUpdateSql, [blockchainBatchId, dataHash, batch.batch_id]);
 
-        res.status(201).json({
-            batchId: finalBatch.batch_id,
-            batchName: finalBatch.batch_name,
-            batchDescription: finalBatch.batch_description,
-            createdAt: finalBatch.created_at,
-            blockchain: {
-                blockchainBatchId: finalBatch.blockchain_batch_id,
-                transactionId: finalBatch.blockchain_tx_id,
-                status: finalBatch.blockchain_status,
-                dataHash: finalBatch.data_hash
-            }
-        });
+        res.status(201).json({ message: "Batch created successfully" });
 
     } catch (err) {
         console.error("Batch Creation Failed:", err);
@@ -372,12 +357,13 @@ app.post('/batches', authenticateToken, async (req, res) => {
 app.get('/batches', authenticateToken, async (req, res) => {
     try {
         const sql = `
-            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name,
+            SELECT b.*, c.name as current_company_name, rc.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name,
                 (SELECT array_agg(source_batch_id) FROM batch_lineage WHERE new_batch_id = b.batch_id) AS source_batch_ids
             FROM batches b
-            JOIN companies c ON b.company_id = c.company_id
+            JOIN companies c ON b.current_company_id = c.company_id
+            JOIN companies rc ON b.registering_company_id = rc.company_id
             JOIN users u ON b.created_by = u.user_id
-            WHERE b.company_id = $1`;
+            WHERE b.current_company_id = $1`;
         const result = await db.query(sql, [req.user.companyId]);
         
         const formatted = result.rows.map(b => ({
@@ -385,10 +371,12 @@ app.get('/batches', authenticateToken, async (req, res) => {
             batchName: b.batch_name,
             batchDescription: b.batch_description,
             createdAt: b.created_at,
-            registeringCompanyId: b.company_id,
+            registeringCompanyId: b.registering_company_id,
             registeringCompanyName: b.registering_company_name,
             registeringUserId: b.created_by,
             registeringUserName: b.registering_user_name,
+            currentCompanyId: b.current_company_id,
+            currentCompanyName: b.current_company_name,
             sourceBatchIds: (b.source_batch_ids || []).map(String),
             blockchain: {
                 blockchainBatchId: b.blockchain_batch_id,
@@ -411,7 +399,7 @@ app.get('/batches/:batchId', async (req, res) => {
             SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name,
                 (SELECT array_agg(source_batch_id) FROM batch_lineage WHERE new_batch_id = b.batch_id) AS source_batch_ids
             FROM batches b
-            JOIN companies c ON b.company_id = c.company_id
+            JOIN companies c ON b.registering_company_id = c.company_id
             JOIN users u ON b.created_by = u.user_id
             WHERE b.batch_id = $1`;
             
@@ -424,10 +412,12 @@ app.get('/batches/:batchId', async (req, res) => {
             batchName: b.batch_name,
             batchDescription: b.batch_description,
             createdAt: b.created_at,
-            registeringCompanyId: b.company_id,
+            registeringCompanyId: b.registering_company_id,
             registeringCompanyName: b.registering_company_name,
             registeringUserId: b.created_by,
             registeringUserName: b.registering_user_name,
+            currentCompanyId: b.current_company_id,
+            currentCompanyName: b.current_company_name,
             sourceBatchIds: (b.source_batch_ids || []).map(String),
             blockchain: {
                 blockchainBatchId: b.blockchain_batch_id,
@@ -487,7 +477,7 @@ app.get('/batchhistory/:batchId', async (req, res) => {
             SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name,
                 (SELECT array_agg(source_batch_id) FROM batch_lineage WHERE new_batch_id = b.batch_id) AS source_batch_ids
             FROM batches b
-            JOIN companies c ON b.company_id = c.company_id
+            JOIN companies c ON b.registering_company_id = c.company_id
             JOIN users u ON b.created_by = u.user_id
             WHERE b.batch_id = ANY($1)
           `, [batchIds]);
@@ -499,10 +489,12 @@ app.get('/batchhistory/:batchId', async (req, res) => {
                     batchName: batch.batch_name,
                     batchDescription: batch.batch_description,
                     createdAt: batch.created_at,
-                    registeringCompanyId: batch.company_id,
+                    registeringCompanyId: batch.registering_company_id,
                     registeringCompanyName: batch.registering_company_name,
                     registeringUserId: batch.created_by,
                     registeringUserName: batch.registering_user_name,
+                    currentCompanyId: batch.current_company_id,
+                    currentCompanyName: batch.current_company_name,
                     varifiedDataOnChain: false,
                     sourceBatchIds: (batch.source_batch_ids || []).map(String),
                     blockchain: {
@@ -518,16 +510,17 @@ app.get('/batchhistory/:batchId', async (req, res) => {
                     batchName: batch.batch_name,
                     batchDescription: batch.batch_description,
                     sourceBatches: normalizedSourceBatchIds,
-                    companyId: batch.company_id,
+                    companyId: batch.registering_company_id,
                     createdAt: batch.created_at
                 };
 
                 const dataHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
                 console.log(`Batch Name: ${batch.batch_name}`);
-
+                console.log(`Blockchain Batch ID: ${batch.blockchain_batch_id}`);
                 if (batch.blockchain_batch_id != null) {
                     const chainDataHash = await contract.getItemDataHash(batch.blockchain_batch_id);
                     const normalizedChainHash = String(chainDataHash).replace(/^0x/i, '').toLowerCase();
+
                     if (normalizedChainHash === dataHash.toLowerCase()) {
                         batchData.varifiedDataOnChain = true;
                     }
@@ -558,43 +551,40 @@ app.get('/batchhistory/:batchId', async (req, res) => {
             [batchIds]
         );
         const transfers = await Promise.all(
-            transfersResults.rows.map(async (t) => {
+            transfersResults.rows.map(async (transfer) => {
                 const transferData = {
-                    transferId: t.transfer_id,
-                    batchId: t.batch_id,
-                    batchName: t.batch_name,
-                    fromCompanyId: t.from_company_id,
-                    fromCompanyName: t.from_company_name,
-                    toCompanyId: t.to_company_id,
-                    toCompanyName: t.to_company_name,
-                    senderUserId: t.sender_user_id,
-                    senderUserName: t.sender_user_name,
-                    receivingUserId: t.receiving_user_id,
-                    receivingUserName: t.receiving_user_name,
+                    transferId: transfer.transfer_id,
+                    batchId: transfer.batch_id,
+                    batchName: transfer.batch_name,
+                    fromCompanyId: transfer.from_company_id,
+                    fromCompanyName: transfer.from_company_name,
+                    toCompanyId: transfer.to_company_id,
+                    toCompanyName: transfer.to_company_name,
+                    senderUserId: transfer.sender_user_id,
+                    senderUserName: transfer.sender_user_name,
+                    receivingUserId: transfer.receiving_user_id,
+                    receivingUserName: transfer.receiving_user_name,
                     varifiedTransferOnChain: false,
-                    status: t.status,
-                    createdAt: t.created_at,
-                    blockchain: {
-                        transactionId: t.blockchain_tx_id ?? null,
-                        status: t.blockchain_status ?? null,
-                    },
+                    status: transfer.status,
+                    createdAt: transfer.created_at,
+                    blockchain: {},
                 };  
 
               
 
                 const dataToHash = {
-                    transferId: t.transfer_id,
-                    batchId: t.batch_id,
-                    fromCompanyId: t.from_company_id,
-                    toCompanyId: t.to_company_id,
-                    createdAt: t.created_at
+                    transferId: transfer.transfer_id,
+                    batchId: transfer.batch_id,
+                    fromCompanyId: transfer.from_company_id,
+                    toCompanyId: transfer.to_company_id,
+                    createdAt: transfer.created_at
                 };
 
-                const dataHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
+                const transferHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
                 
-                const normalizedStoredHash = t.data_hash ? String(t.data_hash).replace(/^0x/i, '').toLowerCase() : null;
+                const normalizedTransferHash = transfer.data_hash ? String(transfer.data_hash).replace(/^0x/i, '').toLowerCase() : null;
 
-                if (normalizedStoredHash === dataHash.toLowerCase()) {
+                if (normalizedTransferHash === transferHash.toLowerCase()) {
                     transferData.varifiedTransferOnChain = true;
                 }
                 return transferData;
@@ -617,9 +607,9 @@ app.get('/batchhistory/:batchId', async (req, res) => {
 // Initiate Transfer
 app.post('/transfers', authenticateToken, async (req, res) => {
     try {
-        // SECURITY CHECK: Ensure the sender's company actually owns this batch!
-        const batchQuery = await db.query("SELECT company_id FROM batches WHERE batch_id = $1", [req.body.batchId]);
-        if (batchQuery.rowCount === 0 || batchQuery.rows[0].company_id !== req.user.companyId) {
+
+        const batchQuery = await db.query("SELECT current_company_id FROM batches WHERE batch_id = $1", [req.body.batchId]);
+        if (batchQuery.rowCount === 0 || batchQuery.rows[0].current_company_id !== req.user.companyId) {
             return res.status(403).json({ error: "Unauthorized: Your company does not own this batch." });
         }
 
@@ -633,39 +623,38 @@ app.post('/transfers', authenticateToken, async (req, res) => {
             req.body.receivingUserId
         ]);
         
-        const t = result.rows[0];
+        const transfer = result.rows[0];
 
         // Hash compelte data
         const dataToHash = {
-            transferId: t.transfer_id,
-            batchId: t.batch_id,
-            fromCompanyId: t.from_company_id,
-            toCompanyId: t.to_company_id,
-            createdAt: t.created_at
+            transferId: transfer.transfer_id,
+            batchId: transfer.batch_id,
+            fromCompanyId: transfer.from_company_id,
+            toCompanyId: transfer.to_company_id,
+            createdAt: transfer.created_at
         }
         const dataHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
 
         // Store Hashed data in DB
         const updateTransferSql = `UPDATE transfers SET data_hash = $1 WHERE transfer_id = $2`;
-        await db.query(updateTransferSql, [dataHash, t.transfer_id]);
-
-        // TODO:
-        // Call smart contract to initiate transfer.
-        // subscribe to blockchain event to update blockchain status once it's accepted on the chain
+        await db.query(updateTransferSql, [dataHash, transfer.transfer_id]);
 
         res.status(201).json({
-            transferId: t.transfer_id,
-            batchId: t.batch_id,
-            fromCompanyId: t.from_company_id,
-            toCompanyId: t.to_company_id,
-            senderUserId: t.sender_user_id,
-            receivingUserId: t.receiving_user_id,
-            createdAt: t.created_at,
-            status: t.status
+            transferId: transfer.transfer_id,
+            batchId: transfer.batch_id,
+            fromCompanyId: transfer.from_company_id,
+            toCompanyId: transfer.to_company_id,
+            senderUserId: transfer.sender_user_id,
+            receivingUserId: transfer.receiving_user_id,
+            createdAt: transfer.created_at,
+            status: transfer.status,
+            blockchain: {
+                dataHash
+            }
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Transfer creation failed" });
+        res.status(500).json({ error: err.message || "Transfer creation failed" });
     }
 });
 
@@ -715,28 +704,67 @@ app.get('/transfers', authenticateToken, async (req, res) => {
 // Complete Transfer
 app.post('/transfers/:transferId/complete', authenticateToken, async (req, res) => {
     const client = await db.connect();
+
     try {
         await client.query('BEGIN');
 
         // Verify transfer belongs to the receiving company
-        const tQuery = await client.query("SELECT * FROM transfers WHERE transfer_id = $1 FOR UPDATE", [req.params.transferId]);
+        const tQuery = await client.query(
+            `SELECT t.*, b.blockchain_batch_id, c.wallet_address AS to_company_wallet_address
+             FROM transfers t
+             JOIN batches b ON b.batch_id = t.batch_id
+             JOIN companies c ON c.company_id = t.to_company_id
+             WHERE t.transfer_id = $1
+             FOR UPDATE`,
+            [req.params.transferId]
+        );
         if (tQuery.rowCount === 0 || tQuery.rows[0].to_company_id !== req.user.companyId) {
-            throw new Error("Unauthorized or invalid transfer");
+            throw new Error("Unauthorized transfer.");
         }
+        if (tQuery.rows[0].status !== 'pending') {
+            throw new Error("Transfer is not pending.");
+        }
+        const transfer = tQuery.rows[0];
+
+        const updateTransferStatusSql = `
+            UPDATE transfers
+            SET status = $1,
+                completed_at = CASE WHEN $1 = 'accepted' THEN NOW() ELSE completed_at END
+            WHERE transfer_id = $2
+        `;
+        await client.query(updateTransferStatusSql, ["accepted", transfer.transfer_id]);
+
+        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+        const wallet = new ethers.Wallet(transfer.to_company_wallet_address, provider);
+        const contract = new ethers.Contract(contractAddress, contractABI, wallet);
+
+        const bytes32Hash = "0x" + String(transfer.data_hash).replace(/^0x/i, "");
+        const tx = await contract.transferOwnership(transfer.blockchain_batch_id, transfer.to_company_wallet_address, bytes32Hash);
+        await tx.wait();
 
         // Update Transfer
         const updateTransferSql = "UPDATE transfers SET status = 'completed', completed_at = NOW() WHERE transfer_id = $1";
         await client.query(updateTransferSql, [req.params.transferId]);
 
         // Update Batch Ownership
-        const updateBatchSql = "UPDATE batches SET company_id = $1 WHERE batch_id = $2";
+        const updateBatchSql = "UPDATE batches SET current_company_id = $1 WHERE batch_id = $2";
         await client.query(updateBatchSql, [req.user.companyId, tQuery.rows[0].batch_id]);
 
         await client.query('COMMIT');
-        res.json({ message: "Accepted Transfer." });
+        res.status(200).json({ message: "Accepted Transfer." });
     } catch (err) {
         await client.query('ROLLBACK');
         console.error(err);
+        if (transfer.transfer_id != null) {
+            try {
+                await db.query(
+                    "UPDATE transfers SET status = 'rejected' WHERE transfer_id = $1",
+                    [transfer.transfer_id]
+                );
+            } catch (updateErr) {
+                console.error("Failed to mark transfer as rejected after accept failure:", updateErr);
+            }
+        }
         res.status(500).json({ error: err.message || "Acceptance failed" });
     } finally {
         client.release();

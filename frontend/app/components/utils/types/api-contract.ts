@@ -115,6 +115,10 @@ export interface CreateTransferResponse {
   receivingUserID: Uuid;
   createdAt: ISODateString;
   status: TransferLifecycleStatus;
+  blockchain: {
+    status?: BatchBlockchainStatus;
+    dataHash: string | null;
+  };
 }
 
 export type TransferListResponse = TransferModel[];

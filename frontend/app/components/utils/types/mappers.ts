@@ -66,7 +66,6 @@ export function normalizeTransferList(rows: unknown): TransferModel[] {
   return list.map((row) => ({
     ...row,
     blockchain: row.blockchain ?? {
-      transactionId: null,
       status: null,
     },
   }));

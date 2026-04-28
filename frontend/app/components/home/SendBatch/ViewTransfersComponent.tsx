@@ -69,9 +69,6 @@ export default function ViewTransfersComponent({ transferList, refreshTransferLi
                 }
               />
               <DetailRow label="Created" value={new Date(transferRequest.createdAt).toLocaleString()} />
-              {transferRequest.blockchain?.status != null && (
-                <DetailRow label="Blockchain" value={transferRequest.blockchain.status} />
-              )}
             </div>
           </div>
         ))}

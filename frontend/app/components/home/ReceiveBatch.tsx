@@ -194,11 +194,6 @@ export default function ReceiveBatch() {
                         }`}
                       >
                         {item.status}
-                        {item.blockchain?.status != null && (
-                          <span className="block text-xs text-gray-500 mt-0.5">
-                            Blockchain: {item.blockchain.status}
-                          </span>
-                        )}
                       </div>
                     </button>
                   ))}
