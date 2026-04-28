@@ -121,3 +121,16 @@ export type TransferListResponse = TransferModel[];
 export interface MessageResponse {
   message: string;
 }
+
+export interface LineageEdge {
+  sourceBatchId: Uuid;
+  derivedBatchId: Uuid;
+}
+
+export interface SupplyChainHistoryResponse {
+  batches: BatchModel[];
+  lineageEdges: LineageEdge[];
+  transfersByBatchId: {
+    [key: Uuid]: TransferModel[];
+  };
+}

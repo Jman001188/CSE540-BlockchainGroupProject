@@ -1,9 +1,9 @@
 "use client";
 
-import { useContext, useEffect, useState } from "react";
-import { RegistrationTokenAPI } from "./apiclient";
-import type { CreateCompanyAdminTokenRequest } from "./types/api-contract";
-import type { CompanyModel } from "./types/models";
+import { useEffect, useState } from "react";
+import { RegistrationTokenAPI } from "./utils/apiclient";
+import type { CreateCompanyAdminTokenRequest } from "./utils/types/api-contract";
+import type { CompanyModel } from "./utils/types/models";
 
 export default function SiteAdmin() {
     const [ newCompanyName, setNewCompanyName ] = useState<string>("");

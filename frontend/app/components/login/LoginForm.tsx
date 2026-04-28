@@ -82,7 +82,15 @@ export default function LoginForm() {
                 <button type="button" className="btn btn-neutral mt-4" onClick={() => router.push("/register")}>
                     Register
                 </button>
-                <hr />
+            </fieldset>
+            <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+                <legend className="fieldset-legend">Check Supply Chain</legend>
+                <button type="button" className="btn btn-neutral mt-4" onClick={() => router.push("/supplychain")}>
+                    Supply Chain
+                </button>
+            </fieldset>
+            <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+                <legend className="fieldset-legend">Dev Tools</legend>
                 <button type="button" className="btn btn-neutral mt-4" onClick={() => router.push("/siteadmin")}>
                     Initialize Companies/Users
                 </button>

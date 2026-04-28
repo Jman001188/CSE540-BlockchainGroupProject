@@ -13,6 +13,7 @@ import type {
     MessageResponse,
     RegisterUserRequest,
     RevokeRegistrationTokenResponse,
+    SupplyChainHistoryResponse,
     UpdateCompanyRequest,
     UpdateUserProfileRequest,
     UpdateUserProfileResponse,
@@ -245,6 +246,17 @@ export const BatchAPI = {
 
         return response.json();
 
+    },
+
+    // Get the supply chain history of a batch
+    getSupplyChainHistory: async (id: Uuid): Promise<SupplyChainHistoryResponse> => {
+        const response = await fetch(`${API}/batches/${id}/supply-chain`, {
+            method: "GET",
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch supply chain history");
+
+        return response.json();
     },
 };
 
