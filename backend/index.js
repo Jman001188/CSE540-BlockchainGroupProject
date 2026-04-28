@@ -605,6 +605,38 @@ app.get('/companies', async (req, res) => {
     }
 });
 
+// Update Company Profile (Managers Only)
+app.patch('/companies/:companyId', authenticateToken, requireManager, async (req, res) => {
+    try {
+        const { companyId } = req.params;
+        const { name } = req.body;
+
+        // SECURITY CHECK: Ensure the manager belongs to the company they are trying to edit
+        if (req.user.companyId !== companyId) {
+            return res.status(403).json({ error: "Unauthorized: You can only edit your own company's profile." });
+        }
+
+        const sql = `UPDATE companies SET name = $1 WHERE company_id = $2 RETURNING *`;
+        const result = await db.query(sql, [name, companyId]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Company not found." });
+        }
+
+        res.json({
+            message: "Company profile updated successfully.",
+            company: {
+                companyId: result.rows[0].company_id,
+                companyName: result.rows[0].name,
+                walletAddress: result.rows[0].wallet_address
+            }
+        });
+    } catch (err) {
+        console.error("Company Update Failed:", err);
+        res.status(500).json({ error: "Internal server error during company update." });
+    }
+});
+
 // Super Admin: Create Manager Token for a Company (Utility)
 app.post('/auth/admin/manager-token', async (req, res) => {
     try {
