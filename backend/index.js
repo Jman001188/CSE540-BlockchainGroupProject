@@ -419,10 +419,20 @@ app.get('/batches', authenticateToken, async (req, res) => {
 app.get('/batches/:batchId', async (req, res) => {
     try {
         const sql = `
-            SELECT b.*, c.name as registering_company_name, u.first_name || ' ' || u.last_name as registering_user_name,
-                (SELECT array_agg(source_batch_id) FROM batch_lineage WHERE new_batch_id = b.batch_id) AS source_batch_ids
+            SELECT 
+                b.*, 
+                c.name as registering_company_name, 
+                cc.name as current_company_name,
+                u.first_name || ' ' || u.last_name as registering_user_name,
+                cc.company_id as current_company_id,
+                (
+                    SELECT array_agg(source_batch_id) 
+                    FROM batch_lineage 
+                    WHERE new_batch_id = b.batch_id
+                ) AS source_batch_ids
             FROM batches b
             JOIN companies c ON b.registering_company_id = c.company_id
+            JOIN companies cc ON b.current_company_id = cc.company_id
             JOIN users u ON b.created_by = u.user_id
             WHERE b.batch_id = $1`;
             
