@@ -77,6 +77,17 @@ export const RegistrationTokenAPI = {
         return response.json();
     },
 
+    // Get the values of a registration token
+    getTokenListDev: async (companyId: string): Promise<RegistrationTokenModel[]> => {
+        const response = await fetch(`${API}/auth/registration-tokens/token-list-dev/${companyId}`, {
+            method: "GET"
+        });
+
+        if (!response.ok) throw new Error("Could not fetch registration tokens.");
+        
+        return response.json();
+    },
+
     // Get the list of registration tokens for a company
     getTokenList: async (sessionToken: string): Promise<RegistrationTokenModel[]> => {
         const response = await fetch(`${API}/auth/registration-tokens/token-list`, {

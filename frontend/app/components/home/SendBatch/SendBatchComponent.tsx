@@ -4,6 +4,7 @@ import QRCamera from "../../global/QRCamera";
 import QRFile from "../../global/QRFile";
 import DetailRow from "../../global/DetailRow";
 import type { BatchQrModel, RecipientQrModel } from "../../utils/types/models";
+import { BatchBlockchainStatus } from "../../utils/types/primitives";
 
 // Passed states from the SendBatchPage component
 type Props = {
@@ -42,16 +43,12 @@ export default function SendBatchComponent({
   triggerItemTransfer,
 }: Props) {
 
-  // Item summary JSX element
-  const itemSummary = processedItemData && (
-    <div className="mt-4 space-y-1">
-      <DetailRow label="Batch ID" value={processedItemData.batchId} mono />
-      <DetailRow label="Name" value={processedItemData.batchName} />
-      <DetailRow label="Owner" value={processedItemData.registeringCompanyName} />
-      <DetailRow label="Description" value={processedItemData.batchDescription ?? "—"} />
-      <DetailRow label="Blockchain status" value={processedItemData.blockchain?.status ?? "—"} />
-    </div>
-  );
+  const resetBatchScan = () => {
+    setCurrentStepForSending("scanItem");
+    setHasItemQrValue(false);
+    setProcessedItemData(null);
+    setIsValidBatch(false);
+  };
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -59,7 +56,7 @@ export default function SendBatchComponent({
         <>
           {!hasItemQrValue ? (
             <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
-              <legend className="fieldset-legend">Step 1 — Item batch</legend>
+              <legend className="fieldset-legend">Step 1 — Scan Item batch</legend>
               <h2 className="text-lg font-bold mb-3">Scan the batch QR you are sending</h2>
               <p className="text-sm text-gray-600 mb-4">Use the camera or upload an image of the QR code.</p>
               <div className="flex flex-col gap-3">
@@ -69,22 +66,8 @@ export default function SendBatchComponent({
             </fieldset>
           ) : (
             <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
-              <legend className="fieldset-legend">Item details</legend>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <h2 className="text-lg font-bold">Review batch</h2>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => {
-                    setHasItemQrValue(false);
-                    setProcessedItemData(null);
-                    setIsValidBatch(false);
-                  }}
-                >
-                  Scan again
-                </button>
-              </div>
-              {itemSummary}
+              <legend className="fieldset-legend">Review batch</legend>
+              <BatchCard batch={processedItemData!} />
               <div className="mt-4">
                 {!isValidBatch ? (
                   <p className="text-sm text-red-600">
@@ -104,25 +87,8 @@ export default function SendBatchComponent({
       {currentStepForSending === "scanRecipient" && hasItemQrValue && (
         <div className="flex flex-col gap-4">
           <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
-            <legend className="fieldset-legend">Item (reference)</legend>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-              <h2 className="text-lg font-bold">Sending this batch</h2>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => {
-                  setCurrentStepForSending("scanItem");
-                  setHasItemQrValue(false);
-                  setHasRecipientQrValue(false);
-                  setProcessedItemData(null);
-                  setProcessedRecipientData(null);
-                  setIsValidBatch(false);
-                }}
-              >
-                Start over
-              </button>
-            </div>
-            {itemSummary}
+            <legend className="fieldset-legend">Review batch</legend>
+            <BatchCard batch={processedItemData!} />
           </fieldset>
 
           {!hasRecipientQrValue ? (
@@ -136,38 +102,84 @@ export default function SendBatchComponent({
               </div>
             </fieldset>
           ) : (
-            <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
-              <legend className="fieldset-legend">Recipient details</legend>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <h2 className="text-lg font-bold">Recipient</h2>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => {
-                    setHasRecipientQrValue(false);
-                    setProcessedRecipientData(null);
-                  }}
-                >
-                  Scan recipient again
-                </button>
-              </div>
-              <div className="mt-4 space-y-1">
-                <DetailRow label="Company ID" value={processedRecipientData?.companyId ?? "—"} mono />
-                <DetailRow label="Company name" value={processedRecipientData?.companyName ?? "—"} />
-                <DetailRow label="Wallet" value={processedRecipientData?.walletAddress ?? "—"} mono />
-              </div>
-              <button
-                type="button"
-                className="btn w-full mt-4"
-                disabled={!hasRecipientQrValue || !hasItemQrValue}
-                onClick={() => triggerItemTransfer()}
-              >
-                Confirm transfer
-              </button>
-            </fieldset>
+            <RecipientCard />
           )}
         </div>
       )}
     </div>
   );
+
+  function BatchCard({ batch }: { batch: BatchQrModel }) {
+    const status = batch.blockchain?.status ?? "pending";
+    const getBlockchainStatusClassName = (s: BatchBlockchainStatus) => {
+      if (s === "confirmed") return "text-green-600";
+      if (s === "pending") return "text-yellow-600";
+      if (s === "failed") return "text-red-600";
+      return "text-gray-600";
+    };
+
+    return (
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold">{batch.batchName}</h2>
+            <p className="text-xs font-mono text-base-content/60 mt-1 break-all" title={batch.batchId}>
+              {batch.batchId}
+            </p>
+          </div>
+          <div className="flex flex-col sm:items-end gap-2 shrink-0">
+            <span
+              className={`text-sm font-medium whitespace-nowrap ${getBlockchainStatusClassName(status)}`}
+            >
+              {status}
+            </span>
+            <button type="button" className="btn btn-sm" onClick={resetBatchScan}>
+              Scan batch again
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 space-y-1">
+          <DetailRow label="Description" value={batch.batchDescription?.trim() || "—"} />
+          <DetailRow label="Owned by" value={batch.currentCompanyName ?? "—"} />
+          <DetailRow label="Created" value={new Date(batch.createdAt).toLocaleString()} />
+        </div>
+      </div>
+    );
+  }
+
+  function RecipientCard() {
+    return (
+      <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
+        <legend className="fieldset-legend">Recipient details</legend>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <h2 className="text-lg font-bold">Recipient</h2>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => {
+              setHasRecipientQrValue(false);
+              setProcessedRecipientData(null);
+            }}
+          >
+            Scan recipient again
+          </button>
+        </div>
+        <div className="mt-4 space-y-1">
+          <DetailRow label="Company ID" value={processedRecipientData?.companyId ?? "—"} mono />
+          <DetailRow label="Company name" value={processedRecipientData?.companyName ?? "—"} />
+          <DetailRow label="Wallet" value={processedRecipientData?.walletAddress ?? "—"} mono />
+        </div>
+        <button
+          type="button"
+          className="btn w-full mt-4"
+          disabled={!hasRecipientQrValue || !hasItemQrValue}
+          onClick={() => triggerItemTransfer()}
+        >
+          Confirm transfer
+        </button>
+      </fieldset>
+    );
+  }
 }
+
+

@@ -13,8 +13,7 @@ export default function Card({ action, route }: CardProps) {
   return (
     <div className="card bg-base-200 border border-base-300 shadow-sm hover:shadow-md transition-shadow h-full">
       <div className="card-body">
-        <h2 className="card-title text-base">{action}</h2>
-        <p className="text-sm text-gray-600">Open this workflow</p>
+        <h2 className="card-title text-xl">{action}</h2>
         <div className="card-actions justify-end mt-3">
           <button type="button" onClick={() => router.push(route)} className="btn btn-sm btn-neutral">
             Open

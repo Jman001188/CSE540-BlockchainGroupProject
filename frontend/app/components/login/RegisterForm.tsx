@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import { Context } from "../global/Context";
 import { RegistrationTokenAPI } from "../utils/apiclient";
@@ -19,6 +19,7 @@ export default function RegisterForm() {
 
   const { sessionToken } = useContext(Context);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Redirect to home if already logged in
   // Checks every time the sessionToken changes
@@ -27,6 +28,15 @@ export default function RegisterForm() {
       router.replace("/home");
     }
   }, [sessionToken, router]);
+
+
+  useEffect(() => {
+    const token = searchParams.get('registrationToken')
+    if (token) {
+      setRegistrationToken(token);
+      submitRegistrationToken(token);
+    }
+  }, []);
 
   // Verify all required fields are filled out and filled correctly
   const verifyRequiredFields = () => {
@@ -61,8 +71,8 @@ export default function RegisterForm() {
     password === confirmPassword;
 
   // sends the enetered reg token to the backend to get the token values
-  const submitRegistrationToken = () => {
-    const code = registrationToken.trim();
+  const submitRegistrationToken = (token?: string) => {
+    const code = token ? token.trim() : registrationToken.trim();
     if (!code) {
       alert("Enter your registration code first.");
       return;

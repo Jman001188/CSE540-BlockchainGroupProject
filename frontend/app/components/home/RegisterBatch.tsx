@@ -10,11 +10,13 @@ import { Context } from "../global/Context";
 import { BatchAPI } from "../utils/apiclient";
 import type { CreateBatchRequest } from "../utils/types/api-contract";
 import type { BatchModel, BatchQrModel } from "../utils/types/models";
+import { BatchBlockchainStatus } from "../utils/types/primitives";
+  
 
 export default function RegisterBatch() {
   const [batchList, setBatchList] = useState<BatchModel[]>([]);
-  const [selectedBatch, setSelectedBatch] = useState<BatchModel | null>(null);
-  const [viewSelect, setViewSelect] = useState<"register" | "list">("register");
+  const [qrBatchWindow, setQrBatchWindow] = useState<BatchModel | null>(null);
+  const [viewSelect, setViewSelect] = useState<"register" | "list">("list");
   const [itemNameInput, setItemNameInput] = useState("");
   const [itemDescriptionInput, setItemDescriptionInput] = useState("");
   const [sourceBatchDataList, setSourceBatchDataList] = useState<Array<BatchQrModel | null>>([]);
@@ -45,9 +47,18 @@ export default function RegisterBatch() {
     refreshBatchList();
   }, [sessionToken, refreshBatchList]);
 
+  useEffect(() => {
+    if (!qrBatchWindow) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setQrBatchWindow(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [qrBatchWindow]);
+
   const handleRefreshBatchListClick = () => {
     refreshBatchList();
-    setSelectedBatch(null);
+    setQrBatchWindow(null);
   };
 
   const clearFields = () => {
@@ -152,25 +163,25 @@ export default function RegisterBatch() {
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex justify-center pb-40">
         <div className="flex flex-col gap-4 p-4 w-full max-w-lg mx-auto">
-          <div className="flex flex-row gap-2">
-            <button
-              type="button"
-              className={`btn btn-sm ${viewSelect === "register" ? "selected-styles" : "default-styles"}`}
-              onClick={() => setViewSelect("register")}
-            >
-              Register New Batch
-            </button>
+          <div className="flex flex-row gap-2 w-full flex-wrap">
             <button 
               type="button"
-              className={`btn btn-sm ${viewSelect === 'list' ? 'selected-styles' : 'default-styles'}`}
+              className="btn btn-sm flex-1 min-w-0"
               onClick={() => {setViewSelect("list"); handleRefreshBatchListClick();}}
             >
               View Registered Batches
             </button>
+            <button
+              type="button"
+              className="btn btn-sm flex-1 min-w-0"
+              onClick={() => setViewSelect("register")}
+            >
+              Register New Batch
+            </button>
           </div>
 
-          {viewSelect === "register" ? (
-            <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+          {viewSelect === "register" && (
+            <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
               <legend className="fieldset-legend">Register Item Batch</legend>
 
               <div className="mb-4">
@@ -241,78 +252,157 @@ export default function RegisterBatch() {
                 </div>
               </div>
 
-              <label className="label">Item Name</label>
-              <input
-                className="input input-bordered"
-                value={itemNameInput}
-                placeholder="Item Name"
-                onChange={(event) => setItemNameInput(event.target.value)}
-              />
-              <label className="label">Item Description</label>
-              <textarea
-                className="textarea textarea-bordered"
-                value={itemDescriptionInput}
-                placeholder="What is this item batch. Give some detail"
-                onChange={(event) => setItemDescriptionInput(event.target.value)}
-              />
-              <button type="button" className="btn mt-2" onClick={submitItemBatch}>
-                Submit
-              </button>
+              <div className="flex flex-col gap-3 w-full">
+                <div className="form-control w-full">
+                  <label className="label">Item Name</label>
+                  <input
+                    className="input input-bordered w-full"
+                    value={itemNameInput}
+                    placeholder="Item Name"
+                    onChange={(event) => setItemNameInput(event.target.value)}
+                  />
+                </div>
+                <div className="form-control w-full">
+                  <label className="label">Item Description</label>
+                  <textarea
+                    className="textarea textarea-bordered w-full min-h-24"
+                    value={itemDescriptionInput}
+                    placeholder="What is this item batch. Give some detail"
+                    onChange={(event) => setItemDescriptionInput(event.target.value)}
+                  />
+                </div>
+                <button type="button" className="btn w-full" onClick={submitItemBatch}>
+                  Submit
+                </button>
+              </div>
             </fieldset>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {selectedBatch && (
-                <>
-                  <h2 className="text-lg font-bold">Batch ID: {selectedBatch.batchId} QR Code</h2>
-                  <QRGenerator data={JSON.stringify(selectedBatch)} />
-                  <hr />
-                </>
-              )}
+          )}
+
+          {viewSelect === "list" && (
+            <fieldset className="fieldset bg-base-200 border-base-300 rounded-box border p-4">
+              <legend className="fieldset-legend">Registered Batches</legend>
               <button type="button" className="btn" onClick={handleRefreshBatchListClick}>
                 Refresh List
               </button>
-              {[...batchList]
-                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                .map((item) => (
-                  <div
-                    key={item.batchId}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setSelectedBatch(item)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setSelectedBatch(item);
-                      }
-                    }}
-                    className="p-4 border rounded-lg shadow cursor-pointer hover:bg-gray-100 transition"
-                  >
-                    <div className="font-bold">Batch #{item.batchId}</div>
-
-                    <div className="text-sm text-gray-600">
-                      {item.batchName} - Registered on {new Date(item.createdAt).toLocaleDateString()} by{" "}
-                      {item.registeringCompanyName}
-                    </div>
-
-                    <div className="text-sm text-gray-600">Registered by {item.registeringUserName}</div>
-                    <div
-                      className={`mt-1 text-sm ${
-                        item.blockchain.status === "confirmed"
-                          ? "text-green-600"
-                          : item.blockchain.status === "pending"
-                            ? "text-yellow-600"
-                            : item.blockchain.status === "failed"
-                              ? "text-red-600"
-                              : "text-gray-600"
-                      }`}
-                    >
-                      Status: {item.blockchain.status}
-                    </div>
-                  </div>
-                ))}
-            </div>
+              <div className="flex flex-col gap-3">
+                {[...batchList]
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map((item) => (
+                    <BatchCard key={item.batchId} batch={item} onShowQr={() => setQrBatchWindow(item)} />
+                  ))}
+                {batchList.length === 0 && (
+                  <div className="p-4 border rounded-lg text-sm text-gray-600">No registered batches yet.</div>
+                )}
+              </div>
+            </fieldset>
           )}
         </div>
+      </div>
+      <QrWindow qrBatchWindow={qrBatchWindow} setQrBatchWindow={setQrBatchWindow} />
+    </div>
+  );
+}
+
+function BatchCard({ batch, onShowQr }: { batch: BatchModel; onShowQr: () => void }) {
+  const router = useRouter();
+  const getBlockchainStatusClassName = (status: BatchBlockchainStatus) => {
+    if (status === "confirmed") return "text-green-600";
+    if (status === "pending") return "text-yellow-600";
+    if (status === "failed") return "text-red-600";
+    return "text-gray-600";
+  };
+
+  const holder = batch.currentCompanyName ?? batch.registeringCompanyName;
+
+  return (
+    <div className="p-4 border border-base-300 rounded-lg bg-base-100 shadow-sm hover:shadow-md transition">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-bold text-lg">{batch.batchName}</div>
+          <div className="text-xs text-gray-500 truncate" title={batch.batchId}>
+            Batch ID: {batch.batchId}
+          </div>
+        </div>
+        <div className="shrink-0 flex flex-row flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          <span
+            className={`text-sm font-medium whitespace-nowrap ${getBlockchainStatusClassName(batch.blockchain?.status ?? "pending")}`}
+          >
+            {batch.blockchain?.status}
+          </span>
+          <button type="button" className="btn btn-sm btn-outline" onClick={onShowQr}>
+            Show QR
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <DetailRow
+          label="Description"
+          value={batch.batchDescription ?? "—"}
+        />
+        <DetailRow label="Owned by" value={batch.currentCompanyName!} />
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-gray-500">Created</p>
+            <div className="text-sm font-medium">
+              {new Date(batch.createdAt).toLocaleString()}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline shrink-0 self-end"
+            onClick={() => router.push(`/home/sendbatch?batchId=${batch.batchId}`)}
+          >
+            Send Batch
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type QrWindowProps = {
+  qrBatchWindow: BatchModel | null;
+  setQrBatchWindow: (batch: BatchModel | null) => void;
+}
+
+function QrWindow({ qrBatchWindow, setQrBatchWindow }: QrWindowProps) {
+  if (!qrBatchWindow) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
+        aria-label="Close dialog"
+        onClick={() => setQrBatchWindow(null)}
+      />
+      <div
+        className="relative z-10 w-full max-w-md rounded-box border border-base-300 bg-base-100 p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="batch-qr-modal-title"
+      >
+        <h2 id="batch-qr-modal-title" className="text-lg font-bold">
+          Batch QR code
+        </h2>
+        <p className="text-sm text-base-content/70 mt-1">{qrBatchWindow.batchName}</p>
+        <p
+          className="text-xs font-mono text-base-content/50 truncate mt-1"
+          title={qrBatchWindow.batchId}
+        >
+          {qrBatchWindow.batchId}
+        </p>
+        <div className="mt-4 flex justify-center">
+          <QRGenerator data={JSON.stringify(qrBatchWindow)} />
+        </div>
+        <button
+          type="button"
+          className="btn btn-primary w-full mt-6"
+          onClick={() => setQrBatchWindow(null)}
+        >
+          Close
+        </button>
       </div>
     </div>
   );

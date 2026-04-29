@@ -86,6 +86,8 @@ export interface BatchQrModel {
   registeringCompanyName: string;
   registeringUserId: Uuid;
   registeringUserName: string;
+  currentCompanyId?: Uuid;
+  currentCompanyName?: string;
   blockchain: {
     blockchainBatchId: number | null;
     transactionId: string | null;

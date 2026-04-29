@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useContext, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Context } from "../../global/Context";
-import { TransferBatchAPI } from "../../utils/apiclient";
-import type { BatchQrModel, RecipientQrModel, TransferModel } from "../../utils/types/models";
+import { BatchAPI, TransferBatchAPI } from "../../utils/apiclient";
+import type { BatchModel, BatchQrModel, RecipientQrModel, TransferModel } from "../../utils/types/models";
 import SendBatchComponent from "./SendBatchComponent";
 import ViewTransfersComponent from "./ViewTransfersComponent";
 import { CreateTransferRequest } from "../../utils/types/api-contract";
@@ -22,6 +22,7 @@ export default function SendBatchPage() {
 
   const { sessionToken } = useContext(Context);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Resets the fields for the send batch flow
   const resetFields = () => {
@@ -33,6 +34,36 @@ export default function SendBatchPage() {
     setCurrentStepForSending("scanItem");
   };
 
+  useEffect(() => {
+    const batchId = searchParams.get('batchId');
+    
+    if (batchId) {
+      BatchAPI.getBatchById(batchId)
+        .then((response) => {
+          const tempBatch: BatchQrModel= {  
+            ...response,
+            currentCompanyId: response.currentCompanyId,
+            currentCompanyName: response.currentCompanyName,
+            blockchain: {
+              blockchainBatchId: response.blockchain.blockchainBatchId,
+              transactionId: response.blockchain.transactionId,
+              status: response.blockchain.status,
+              dataHash: response.blockchain.dataHash,
+            },
+          };
+          setCurrentStepForSending("scanRecipient");
+          setProcessedItemData(tempBatch);
+          setHasItemQrValue(true);
+          setIsValidBatch(tempBatch.blockchain?.status !== "failed");
+          console.log("Batch:", tempBatch);
+        })
+        .catch((error) => {
+          console.error("Error fetching batch:", error);
+          alert("Failed to fetch batch.");
+        });
+      }
+  }, []);
+  
   // Refreshes the transfer list
   const refreshTransferList = useCallback(() => {
     if (!sessionToken) {
@@ -125,15 +156,17 @@ export default function SendBatchPage() {
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex justify-center pb-40">
         <div className="flex flex-col gap-4 p-4 w-full max-w-lg mx-auto">
-          <div className="flex flex-row gap-2 flex-wrap">
+          <div className="flex flex-row gap-2 w-full">
             <button
-              className={`btn btn-sm ${viewSelect === "sendbatch" ? "selected-styles" : "default-styles"}`}
+              type="button"
+              className="btn btn-sm flex-1 min-w-0"
               onClick={() => setViewSelect("sendbatch")}
             >
               Send item batch
             </button>
             <button
-              className={`btn btn-sm ${viewSelect === "viewtransfers" ? "selected-styles" : "default-styles"}`}
+              type="button"
+              className="btn btn-sm flex-1 min-w-0"
               onClick={() => {
                 setViewSelect("viewtransfers");
                 refreshTransferList();

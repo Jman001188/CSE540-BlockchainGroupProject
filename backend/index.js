@@ -165,6 +165,40 @@ app.get('/auth/registration-tokens/token-list', authenticateToken, requireManage
     }
 });
 
+// Get Registration Token List (DEV Only) - REmove before production
+app.get('/auth/registration-tokens/token-list-dev/:companyId', async (req, res) => {
+    try {
+        console.log("DEBUG STATEMENT 1");
+        const sql = `
+            SELECT rt.*, c.name as company_name, u.first_name || ' ' || u.last_name as created_by_name
+            FROM registration_tokens rt 
+            JOIN companies c ON rt.company_id = c.company_id 
+            LEFT JOIN users u ON rt.created_by = u.user_id
+            WHERE rt.company_id = $1`;
+        const result = await db.query(sql, [req.params.companyId]);
+        
+
+        console.log("DEBUG STATEMENT 2");
+        const formatted = result.rows.map(rt => ({
+            tokenId: rt.registration_token_id,
+            registrationToken: rt.token,
+            email: rt.email,
+            companyId: rt.company_id,
+            companyName: rt.company_name,
+            role: rt.role,
+            status: rt.status,
+            createdAt: rt.created_at,
+            createdById: rt.created_by,
+            createdByName: rt.created_by_name
+        }));
+        console.log("DEBUG STATEMENT 3");
+        res.json(formatted);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch tokens" });
+    }
+});
+
 // Get Registration Token Info (Public - for pre-filling signup form)
 app.post('/auth/registration-tokens/token', async (req, res) => {
     try {
