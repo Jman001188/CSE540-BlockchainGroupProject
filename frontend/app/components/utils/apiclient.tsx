@@ -202,7 +202,7 @@ export const CompanyAPI = {
         
         if (!response.ok) throw new Error("Company update failed");
 
-        const data = (await response.json()) as UpdateCompanyResponse;
+        const data = await response.json();
         return normalizeUpdateCompanyResponse(data);
     },
 };
@@ -275,10 +275,7 @@ export const TransferBatchAPI = {
             body: JSON.stringify(request)
         });
 
-        if (!response.ok) {
-            const body = await response.json().catch(() => ({} as { error?: string }));
-            throw new Error(body.error || `Error: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error("Failed to initiate transfer");
 
         return response.json();
     },

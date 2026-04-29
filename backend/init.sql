@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS companies (
     company_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     wallet_address TEXT,
+    encrypted_private_key TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -35,10 +36,11 @@ CREATE TABLE IF NOT EXISTS registration_tokens (
 CREATE TABLE IF NOT EXISTS batches (
     batch_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     blockchain_batch_id BIGINT UNIQUE,
-    batch_name TEXT NOT NULL,
-    batch_description TEXT,
-    company_id UUID REFERENCES companies(company_id),
+    registering_company_id UUID REFERENCES companies(company_id),
     created_by UUID REFERENCES users(user_id),
+    current_company_id UUID REFERENCES companies(company_id),
+    batch_name TEXT NOT NULL,
+    batch_description TEXT, 
     created_at TIMESTAMP DEFAULT NOW(),
     blockchain_tx_id TEXT,
     blockchain_status TEXT CHECK (blockchain_status IN ('pending', 'confirmed', 'failed')),
@@ -64,7 +66,7 @@ CREATE TABLE IF NOT EXISTS transfers (
 
 CREATE TABLE IF NOT EXISTS batch_lineage (
     lineage_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    new_batch_id  uuid NOT NULL REFERENCES batches (batch_id) ON DELETE RESTRICT,
+    new_batch_id      uuid NOT NULL REFERENCES batches (batch_id) ON DELETE RESTRICT,
     source_batch_id   uuid NOT NULL REFERENCES batches (batch_id) ON DELETE RESTRICT,
     created_at        TIMESTAMP NOT NULL DEFAULT now(),
 

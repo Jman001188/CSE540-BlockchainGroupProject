@@ -9,9 +9,6 @@ function getReceivingUserId(body) {
     return body.receivingUserId ?? body.receivingUserID ?? null;
 }
 
-/**
- * Throws HttpError on failed checks; returns when the transfer may be created.
- */
 async function assertCanInitiateTransfer({
     db,
     ethers,
