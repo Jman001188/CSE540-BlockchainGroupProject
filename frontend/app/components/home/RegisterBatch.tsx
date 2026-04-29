@@ -15,7 +15,7 @@ import { BatchBlockchainStatus } from "../utils/types/primitives";
 
 export default function RegisterBatch() {
   const [batchList, setBatchList] = useState<BatchModel[]>([]);
-  const [qrBatchWindow, setQrBatchWindow] = useState<BatchModel | null>(null);
+  const [qrBatchWindow, setQrBatchWindow] = useState<BatchQrModel | null>(null);
   const [viewSelect, setViewSelect] = useState<"register" | "list">("list");
   const [itemNameInput, setItemNameInput] = useState("");
   const [itemDescriptionInput, setItemDescriptionInput] = useState("");
@@ -159,6 +159,25 @@ export default function RegisterBatch() {
       });
   };
 
+  const toBatchQrPayload = (batch: BatchModel): BatchQrModel => ({
+    batchId: batch.batchId,
+    batchName: batch.batchName,
+    batchDescription: batch.batchDescription ?? null,
+    createdAt: batch.createdAt,
+    registeringCompanyId: batch.registeringCompanyId,
+    registeringCompanyName: batch.registeringCompanyName,
+    registeringUserId: batch.registeringUserId,
+    registeringUserName: batch.registeringUserName,
+    currentCompanyId: batch.currentCompanyId,
+    currentCompanyName: batch.currentCompanyName,
+    blockchain: {
+      blockchainBatchId: batch.blockchain?.blockchainBatchId ?? null,
+      transactionId: batch.blockchain?.transactionId ?? null,
+      status: batch.blockchain?.status ?? "pending",
+      dataHash: batch.blockchain?.dataHash ?? null,
+    },
+  });
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex justify-center pb-40">
@@ -288,7 +307,11 @@ export default function RegisterBatch() {
                 {[...batchList]
                   .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                   .map((item) => (
-                    <BatchCard key={item.batchId} batch={item} onShowQr={() => setQrBatchWindow(item)} />
+                    <BatchCard
+                      key={item.batchId}
+                      batch={item}
+                      onShowQr={() => setQrBatchWindow(toBatchQrPayload(item))}
+                    />
                   ))}
                 {batchList.length === 0 && (
                   <div className="p-4 border rounded-lg text-sm text-gray-600">No registered batches yet.</div>
@@ -362,12 +385,13 @@ function BatchCard({ batch, onShowQr }: { batch: BatchModel; onShowQr: () => voi
 }
 
 type QrWindowProps = {
-  qrBatchWindow: BatchModel | null;
-  setQrBatchWindow: (batch: BatchModel | null) => void;
+  qrBatchWindow: BatchQrModel | null;
+  setQrBatchWindow: (batch: BatchQrModel | null) => void;
 }
 
 function QrWindow({ qrBatchWindow, setQrBatchWindow }: QrWindowProps) {
   if (!qrBatchWindow) return null;
+  const qrPayload = JSON.stringify(qrBatchWindow);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -394,7 +418,7 @@ function QrWindow({ qrBatchWindow, setQrBatchWindow }: QrWindowProps) {
           {qrBatchWindow.batchId}
         </p>
         <div className="mt-4 flex justify-center">
-          <QRGenerator data={JSON.stringify(qrBatchWindow)} />
+          <QRGenerator data={qrPayload} />
         </div>
         <button
           type="button"

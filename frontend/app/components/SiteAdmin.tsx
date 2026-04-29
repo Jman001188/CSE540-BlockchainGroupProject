@@ -70,8 +70,10 @@ export default function SiteAdmin() {
         
         RegistrationTokenAPI.createCompanyAdminToken(apiPayload)
             .then((response) => {
-                updateCompanyList();
                 alert("Token: " + response.registrationToken);
+                getRegistrationTokensForCompany(selectedCompany);
+
+                
             })
             .catch((error) => {
                 console.error("Error:", error);
@@ -220,15 +222,14 @@ export default function SiteAdmin() {
                                     <label className="text-sm text-base-content/70">New user email</label>
                                     <input
                                         className="input w-full mt-1"
-                                        value={newCompanyName}
-                                        onChange={(e) => setNewCompanyName(e.target.value)}
+                                        value={newUserEmail}
+                                        onChange={(e) => setNewUserEmail(e.target.value)}
                                     />
                                 </div>
-
                                 <button
                                     className="btn w-full mt-4"
                                     onClick={createNewManagerButton}
-                                    disabled={newCompanyName.trim() === ""}
+                                    disabled={newUserEmail.trim() === ""}
                                 >
                                     Create Manager Token
                                 </button>

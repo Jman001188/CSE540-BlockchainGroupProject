@@ -13,7 +13,11 @@ export default function QRGenerator({data}: Props) {
 
   useEffect(() => {
     const generate = async () => {
-      const url = await QRCode.toDataURL(data);
+      const url = await QRCode.toDataURL(data, {
+        width: 420,
+        margin: 2,
+        errorCorrectionLevel: "M",
+      });
       setQr(url);
     };
 
@@ -22,7 +26,7 @@ export default function QRGenerator({data}: Props) {
 
   return (
     <div>
-      {qr && <img src={qr} alt="QR Code" />}
+      {qr && <img src={qr} alt="QR Code" className="w-[280px] h-[280px] sm:w-[320px] sm:h-[320px]" />}
     </div>
   );
 }

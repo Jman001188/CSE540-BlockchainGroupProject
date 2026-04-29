@@ -32,6 +32,9 @@ export default function Navbar() {
             <div className="navbar-start">
                 <button className="btn btn-ghost text-xl" onClick={() => router.push("/home")} >Home</button>
             </div>
+            <h1 className="text-xl md:text-2xl font-extrabold tracking-wide whitespace-nowrap text-base-content drop-shadow-sm">
+                The Honest Harvest      
+            </h1>
             <div className="navbar-end">
                 {!isLoggedIn ? (<button className="btn" onClick={handleLogin}>
                         Login

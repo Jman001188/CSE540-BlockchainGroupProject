@@ -87,13 +87,12 @@ export default function SendBatchPage() {
     if (!result.trim()) return;
     try {
       const parsed = JSON.parse(result) as BatchQrModel;
-      const status = parsed?.blockchain?.status;
-      if (!status) throw new Error("Invalid batch QR payload");
+      if (!parsed?.batchId) throw new Error("Invalid batch QR payload");
 
       setProcessedItemData(parsed);
-      console.log("Item QR Result:", parsed);
       setHasItemQrValue(true);
-      setIsValidBatch(status !== "failed");
+      const parsedStatus = parsed.blockchain?.status;
+      setIsValidBatch(parsedStatus !== "failed");
     } catch (error) {
       console.error("Error processing Item QR result:", error);
       alert("Could not read item QR code. Please scan a valid batch QR.");
