@@ -15,6 +15,7 @@ import type {
     RevokeRegistrationTokenResponse,
     SupplyChainHistoryResponse,
     UpdateCompanyRequest,
+    UpdateCompanyResponse,
     UpdateUserProfileRequest,
     UpdateUserProfileResponse,
 } from "./types/api-contract";
@@ -24,6 +25,7 @@ import {
     normalizeRevokeTokenResponse,
     normalizeCompany,
     normalizeTransferList,
+    normalizeUpdateCompanyResponse,
     normalizeUpdateUserProfileResponse,
 } from "./types/mappers";
 import type { BatchModel, CompanyModel, RegistrationTokenModel, TransferModel } from "./types/models";
@@ -200,7 +202,8 @@ export const CompanyAPI = {
         
         if (!response.ok) throw new Error("Company update failed");
 
-        return response.json();
+        const data = (await response.json()) as UpdateCompanyResponse;
+        return normalizeUpdateCompanyResponse(data);
     },
 };
 
@@ -272,7 +275,10 @@ export const TransferBatchAPI = {
             body: JSON.stringify(request)
         });
 
-        if (!response.ok) throw new Error("Failed to initiate transfer");
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({} as { error?: string }));
+            throw new Error(body.error || `Error: ${response.status} ${response.statusText}`);
+        }
 
         return response.json();
     },

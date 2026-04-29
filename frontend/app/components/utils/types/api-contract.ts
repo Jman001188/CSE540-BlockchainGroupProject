@@ -63,11 +63,17 @@ export interface UpdateUserProfileResponse {
   user: Pick<UserModel, "userId" | "firstName" | "lastName" | "role">;
 }
 
+/** Raw company row (snake_case). Backend omits `encrypted_private_key` from JSON. */
 export interface CompanyRowSnake {
   company_id: Uuid;
   name: string;
   wallet_address: string | null;
   created_at: ISODateString;
+}
+
+export interface UpdateCompanyResponse {
+  message: string;
+  company: Pick<CompanyModel, "companyId" | "companyName" | "walletAddress">;
 }
 
 export interface CreateCompanyRequest {

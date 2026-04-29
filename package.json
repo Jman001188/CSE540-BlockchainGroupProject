@@ -7,7 +7,9 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
     "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "hardhat": "^3.4.2"
   }
 }

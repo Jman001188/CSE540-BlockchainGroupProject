@@ -14,6 +14,7 @@ Stores the overarching organizations that interact within the supply chain.
 | `company_id` | `UUID` | **PRIMARY KEY** | Auto-generated UUID. |
 | `name` | `TEXT` | `NOT NULL` | The public name of the company. |
 | `wallet_address` | `TEXT` | `NULL` | The Ethereum wallet address for smart contract interactions. |
+| `encrypted_private_key` | `TEXT` | `NULL` | AES-256-GCM JSON (iv, ciphertext, tag) for the company signing key; not returned by API. |
 | `created_at` | `TIMESTAMP` | `DEFAULT NOW()` | Record creation timestamp. |
 
 ---

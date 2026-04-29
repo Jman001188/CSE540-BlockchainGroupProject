@@ -47,6 +47,8 @@ export interface BatchModel {
   registeringCompanyName: string;
   registeringUserId: Uuid;
   registeringUserName: string;
+  currentCompanyId?: Uuid;
+  currentCompanyName?: string;
   varifiedDataOnChain?: boolean;
   sourceBatchIds?: Uuid[];
   blockchain: {

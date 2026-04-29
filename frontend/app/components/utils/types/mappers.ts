@@ -6,6 +6,7 @@ import type {
   CreateTransferResponse,
   RevokeRegistrationTokenResponse,
   RevokeRegistrationTokenWireRow,
+  UpdateCompanyResponse,
   UpdateUserProfileResponse,
 } from "./api-contract";
 import type { CompanyModel, TransferModel } from "./models";
@@ -25,6 +26,15 @@ export function normalizeCompany(response: CompanyRowSnake): CompanyModel {
     companyName: response.name,
     walletAddress: response.wallet_address ?? null,
     createdAt: response.created_at,
+  };
+}
+
+export function normalizeUpdateCompanyResponse(body: UpdateCompanyResponse): CompanyModel {
+  const c = body.company;
+  return {
+    companyId: String(c.companyId) as Uuid,
+    companyName: c.companyName,
+    walletAddress: c.walletAddress ?? null,
   };
 }
 

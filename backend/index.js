@@ -3,9 +3,21 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto'); 
 const jwt = require('jsonwebtoken'); 
-const db = require('./db'); 
-const fs = require('fs');
-require('dotenv').config();
+const db = require('./db');
+const {
+    encryptCompanyPrivateKey,
+    decryptCompanyPrivateKey,
+} = require('./cryptoCompanyWallet');
+const {
+    sendEthToAddress,
+    shouldAutoFundNewCompanyWallets,
+    getFaucetAmountWei,
+} = require('./fundWallet');
+const {
+    HttpError,
+    getReceivingUserId,
+    assertCanInitiateTransfer,
+} = require('./validateInitiateTransfer');
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
 const app = express();
@@ -20,19 +32,14 @@ try {
     const deployPath = isDocker 
         ? '/deployments/deployed-address.json' 
         : '../blockchain/honest_harvest_hardhat_files/deployments/deployed-address.json';
+    const abiPath = isDocker
+        ? '/abi/SupplyChainContract.json'
+        : '../blockchain/honest_harvest_hardhat_files/abi/SupplyChainContract.json';
 
     const deployedData = require(deployPath);
     contractAddress = deployedData.address;
+    contractABI = require(abiPath);
 
-    contractABI = [
-        "function registerItem(bytes32 dataHash) external returns (uint256)",
-        "function transferOwnership(uint256 itemID, address newOwner, bytes32 transferHash) external",
-        "function updateItemDataHash(uint256 itemID, bytes32 newDataHash) external",
-        "function getItemDataHash(uint256 itemID) external view returns (bytes32)",
-        "event ItemRegistered(uint256 indexed itemID, address indexed owner, bytes32 dataHash)",
-        "event OwnershipTransferred(address indexed from, address indexed to, bytes32 transferHash)"
-    ];
-    
     console.log(`✅ Smart Contract loaded! Environment: ${isDocker ? 'Docker' : 'Local'}`);
     console.log(`   Contract Address: ${contractAddress}`);
 } catch (err) {
@@ -44,6 +51,23 @@ app.use((req, res, next) => {
     console.log(`${req.method}: ${req.url}`);
     next();
 });
+
+async function getCompanySigner(provider, companyId) {
+    const { rows } = await db.query(
+        'SELECT encrypted_private_key, wallet_address FROM companies WHERE company_id = $1',
+        [companyId]
+    );
+    const row = rows[0];
+    if (!row?.encrypted_private_key) {
+        throw new Error(
+            'Company has no encrypted signing key. Use POST /company or store a key for this company.'
+        );
+    }
+    const pk = decryptCompanyPrivateKey(row.encrypted_private_key);
+    const wallet = new ethers.Wallet(pk, provider);
+
+    return wallet;
+}
 
 // --- SECURITY MIDDLEWARE ---
 
@@ -309,9 +333,8 @@ app.post('/batches', authenticateToken, async (req, res) => {
         };
         const dataHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
 
-        // Setup Ethers connection
         const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-        const wallet = new ethers.Wallet(process.env.COMPANY_PRIVATE_KEY, provider);
+        const wallet = await getCompanySigner(provider, req.user.companyId);
         const contract = new ethers.Contract(contractAddress, contractABI, wallet);
 
         // 1. Ethers needs bytes32 to start with "0x"
@@ -607,22 +630,31 @@ app.get('/batchhistory/:batchId', async (req, res) => {
 // Initiate Transfer
 app.post('/transfers', authenticateToken, async (req, res) => {
     try {
+        const { batchId, toCompanyId } = req.body;
+        const recvId = getReceivingUserId(req.body);
 
-        const batchQuery = await db.query("SELECT current_company_id FROM batches WHERE batch_id = $1", [req.body.batchId]);
-        if (batchQuery.rowCount === 0 || batchQuery.rows[0].current_company_id !== req.user.companyId) {
-            return res.status(403).json({ error: "Unauthorized: Your company does not own this batch." });
-        }
+        await assertCanInitiateTransfer({
+            db,
+            ethers,
+            rpcUrl: process.env.RPC_URL,
+            contractAddress,
+            contractABI,
+            batchId,
+            toCompanyId,
+            recvId,
+            companyId: req.user.companyId,
+        });
 
         const sql = `INSERT INTO transfers (batch_id, from_company_id, to_company_id, sender_user_id, receiving_user_id, status) 
                      VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING *`;
         const result = await db.query(sql, [
-            req.body.batchId, 
-            req.user.companyId, 
-            req.body.toCompanyId, 
+            batchId,
+            req.user.companyId,
+            toCompanyId,
             req.user.userId,
-            req.body.receivingUserId
+            recvId,
         ]);
-        
+
         const transfer = result.rows[0];
 
         // Hash compelte data
@@ -631,8 +663,8 @@ app.post('/transfers', authenticateToken, async (req, res) => {
             batchId: transfer.batch_id,
             fromCompanyId: transfer.from_company_id,
             toCompanyId: transfer.to_company_id,
-            createdAt: transfer.created_at
-        }
+            createdAt: transfer.created_at,
+        };
         const dataHash = crypto.createHash('sha256').update(JSON.stringify(dataToHash)).digest('hex');
 
         // Store Hashed data in DB
@@ -648,13 +680,14 @@ app.post('/transfers', authenticateToken, async (req, res) => {
             receivingUserId: transfer.receiving_user_id,
             createdAt: transfer.created_at,
             status: transfer.status,
-            blockchain: {
-                dataHash
-            }
+            blockchain: { dataHash },
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message || "Transfer creation failed" });
+        if (err instanceof HttpError) {
+            return res.status(err.status).json({ error: err.message });
+        }
+        res.status(500).json({ error: err.message || 'Transfer creation failed' });
     }
 });
 
@@ -708,23 +741,44 @@ app.post('/transfers/:transferId/complete', authenticateToken, async (req, res) 
     try {
         await client.query('BEGIN');
 
-        // Verify transfer belongs to the receiving company
         const tQuery = await client.query(
-            `SELECT t.*, b.blockchain_batch_id, c.wallet_address AS to_company_wallet_address
+            `SELECT t.*, b.blockchain_batch_id,
+                    c_from.wallet_address AS from_company_wallet_address,
+                    c_to.wallet_address AS to_company_wallet_address
              FROM transfers t
              JOIN batches b ON b.batch_id = t.batch_id
-             JOIN companies c ON c.company_id = t.to_company_id
+             JOIN companies c_from ON c_from.company_id = t.from_company_id
+             JOIN companies c_to ON c_to.company_id = t.to_company_id
              WHERE t.transfer_id = $1
              FOR UPDATE`,
             [req.params.transferId]
         );
         if (tQuery.rowCount === 0 || tQuery.rows[0].to_company_id !== req.user.companyId) {
-            throw new Error("Unauthorized transfer.");
+            throw new Error('Unauthorized transfer.');
         }
         if (tQuery.rows[0].status !== 'pending') {
-            throw new Error("Transfer is not pending.");
+            throw new Error('Transfer is not pending.');
         }
         const transfer = tQuery.rows[0];
+
+        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+        const readContract = new ethers.Contract(contractAddress, contractABI, provider);
+
+        if (transfer.blockchain_batch_id == null) {
+            throw new Error('This batch is not registered on-chain (missing blockchain_batch_id). Create or confirm the batch on the blockchain first.');
+        }
+
+        const itemId = BigInt(transfer.blockchain_batch_id);
+        const exists = await readContract.itemExistsOnChain(itemId);
+        if (!exists) {
+            throw new Error(`On-chain item id ${transfer.blockchain_batch_id} does not exist at the configured contract (chain reset or stale database id).`);
+        }
+
+        const ownerOnChain = await readContract.getItemOwner(itemId);
+        const fromAddr = ethers.getAddress(transfer.from_company_wallet_address);
+        if (ownerOnChain.toLowerCase() !== fromAddr.toLowerCase()) {
+            throw new Error(`On-chain owner ${ownerOnChain} does not match the sending company's wallet ${fromAddr}.`);
+        }
 
         const updateTransferStatusSql = `
             UPDATE transfers
@@ -732,40 +786,37 @@ app.post('/transfers/:transferId/complete', authenticateToken, async (req, res) 
                 completed_at = CASE WHEN $1 = 'accepted' THEN NOW() ELSE completed_at END
             WHERE transfer_id = $2
         `;
-        await client.query(updateTransferStatusSql, ["accepted", transfer.transfer_id]);
+        await client.query(updateTransferStatusSql, ['accepted', req.params.transferId]);
 
-        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-        const wallet = new ethers.Wallet(transfer.to_company_wallet_address, provider);
+        const wallet = await getCompanySigner(provider, transfer.from_company_id);
         const contract = new ethers.Contract(contractAddress, contractABI, wallet);
 
         const bytes32Hash = "0x" + String(transfer.data_hash).replace(/^0x/i, "");
-        const tx = await contract.transferOwnership(transfer.blockchain_batch_id, transfer.to_company_wallet_address, bytes32Hash);
+        const tx = await contract.transferOwnership(itemId, transfer.to_company_wallet_address, bytes32Hash);
         await tx.wait();
 
         // Update Transfer
         const updateTransferSql = "UPDATE transfers SET status = 'completed', completed_at = NOW() WHERE transfer_id = $1";
         await client.query(updateTransferSql, [req.params.transferId]);
 
-        // Update Batch Ownership
-        const updateBatchSql = "UPDATE batches SET current_company_id = $1 WHERE batch_id = $2";
-        await client.query(updateBatchSql, [req.user.companyId, tQuery.rows[0].batch_id]);
+        const updateBatchSql = 'UPDATE batches SET current_company_id = $1 WHERE batch_id = $2';
+        await client.query(updateBatchSql, [req.user.companyId, transfer.batch_id]);
 
         await client.query('COMMIT');
-        res.status(200).json({ message: "Accepted Transfer." });
+        res.status(200).json({ message: 'Accepted Transfer.' });
     } catch (err) {
         await client.query('ROLLBACK');
         console.error(err);
-        if (transfer.transfer_id != null) {
-            try {
-                await db.query(
-                    "UPDATE transfers SET status = 'rejected' WHERE transfer_id = $1",
-                    [transfer.transfer_id]
-                );
-            } catch (updateErr) {
-                console.error("Failed to mark transfer as rejected after accept failure:", updateErr);
-            }
+        try {
+            await db.query(
+                `UPDATE transfers SET status = 'rejected'
+                 WHERE transfer_id = $1 AND to_company_id = $2 AND status IN ('pending', 'accepted')`,
+                [req.params.transferId, req.user.companyId]
+            );
+        } catch (updateErr) {
+            console.error('Failed to mark transfer as rejected after accept failure:', updateErr);
         }
-        res.status(500).json({ error: err.message || "Acceptance failed" });
+        res.status(500).json({ error: err.message || 'Acceptance failed' });
     } finally {
         client.release();
     }
@@ -793,12 +844,30 @@ app.post('/company', async (req, res) => {
         const { name } = req.body;
 
         const randomWallet = ethers.Wallet.createRandom();
-        const generatedWalletAddress = randomWallet.address;
-        const privateKey = randomWallet.privateKey; 
-        
-        const sql = "INSERT INTO companies (name, wallet_address) VALUES ($1, $2) RETURNING *";
-        const result = await db.query(sql, [name, generatedWalletAddress]);
-        
+        const encryptedPrivateKey = encryptCompanyPrivateKey(randomWallet.privateKey);
+
+        const sql = `
+            INSERT INTO companies (name, wallet_address, encrypted_private_key)
+            VALUES ($1, $2, $3)
+            RETURNING company_id, name, wallet_address, created_at`;
+        const result = await db.query(sql, [name, randomWallet.address, encryptedPrivateKey]);
+
+        // This funds new wallets with ETH - Only used for test net
+        if (shouldAutoFundNewCompanyWallets()) {
+            try {
+                const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+                const fundResult = await sendEthToAddress(
+                    provider,
+                    process.env.FAUCET_PRIVATE_KEY,
+                    randomWallet.address,
+                    getFaucetAmountWei()
+                );
+                console.log(`Funded new company wallet ${randomWallet.address}: ${fundResult.transactionHash}`);
+            } catch (fundErr) {
+                console.error('Autofund new company wallet failed:', fundErr.message || fundErr);
+            }
+        }
+
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error(err);
@@ -808,7 +877,7 @@ app.post('/company', async (req, res) => {
 
 app.get('/company/:companyId', async (req, res) => {
     try {
-        const result = await db.query('SELECT * FROM companies WHERE company_id = $1', [req.params.companyId]);
+        const result = await db.query(`SELECT company_id, name, wallet_address, created_at FROM companies WHERE company_id = $1`, [req.params.companyId]);
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
@@ -819,7 +888,7 @@ app.get('/company/:companyId', async (req, res) => {
 // Get All Companies
 app.get('/companies', async (req, res) => {
     try {
-        const sql = "SELECT * FROM companies ORDER BY created_at DESC";
+        const sql = `SELECT company_id, name, wallet_address, created_at FROM companies ORDER BY created_at DESC`;
         const result = await db.query(sql);
         res.json(result.rows);
     } catch (err) {
@@ -839,7 +908,7 @@ app.patch('/companies/:companyId', authenticateToken, requireManager, async (req
             return res.status(403).json({ error: "Unauthorized: You can only edit your own company's profile." });
         }
 
-        const sql = `UPDATE companies SET name = $1 WHERE company_id = $2 RETURNING *`;
+        const sql = `UPDATE companies SET name = $1 WHERE company_id = $2 RETURNING company_id, name, wallet_address, created_at`;
         const result = await db.query(sql, [name, companyId]);
 
         if (result.rowCount === 0) {
