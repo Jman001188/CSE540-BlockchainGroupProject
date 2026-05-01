@@ -92,10 +92,9 @@ export default function RegisterBatch() {
     if (!result.trim()) return;
     try {
       const parsed = JSON.parse(result) as BatchQrModel;
-      const status = parsed?.blockchain?.status;
-      if (!parsed?.batchId || !status) throw new Error("Invalid batch QR payload");
+      if (!parsed?.batchId || !parsed.blockchainStatus) throw new Error("Invalid batch QR payload");
 
-      if (status === "failed") {
+      if (parsed.blockchainStatus === "failed") {
         alert("This batch has a failed blockchain status and cannot be used as a source.");
         return;
       }
@@ -163,19 +162,8 @@ export default function RegisterBatch() {
     batchId: batch.batchId,
     batchName: batch.batchName,
     batchDescription: batch.batchDescription ?? null,
-    createdAt: batch.createdAt,
-    registeringCompanyId: batch.registeringCompanyId,
-    registeringCompanyName: batch.registeringCompanyName,
-    registeringUserId: batch.registeringUserId,
-    registeringUserName: batch.registeringUserName,
-    currentCompanyId: batch.currentCompanyId,
-    currentCompanyName: batch.currentCompanyName,
-    blockchain: {
-      blockchainBatchId: batch.blockchain?.blockchainBatchId ?? null,
-      transactionId: batch.blockchain?.transactionId ?? null,
-      status: batch.blockchain?.status ?? "pending",
-      dataHash: batch.blockchain?.dataHash ?? null,
-    },
+    currentCompanyName: batch.currentCompanyName ?? batch.registeringCompanyName,
+    blockchainStatus: batch.blockchain?.status ?? "pending",
   });
 
   return (
@@ -233,9 +221,9 @@ export default function RegisterBatch() {
                           <div className="space-y-1">
                             <DetailRow label="Batch ID" value={item.batchId} mono />
                             <DetailRow label="Name" value={item.batchName} />
-                            <DetailRow label="Owner" value={item.registeringCompanyName} />
+                            <DetailRow label="Current company" value={item.currentCompanyName ?? "—"} />
                             <DetailRow label="Description" value={item.batchDescription ?? "—"} />
-                            <DetailRow label="Blockchain status" value={item.blockchain?.status ?? "—"} />
+                            <DetailRow label="Blockchain status" value={item.blockchainStatus} />
                             <button
                               type="button"
                               className="btn btn-sm btn-outline mt-2"

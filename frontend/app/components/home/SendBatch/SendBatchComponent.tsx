@@ -110,7 +110,7 @@ export default function SendBatchComponent({
   );
 
   function BatchCard({ batch }: { batch: BatchQrModel }) {
-    const status = batch.blockchain?.status ?? "pending";
+    const status = batch.blockchainStatus;
     const getBlockchainStatusClassName = (s: BatchBlockchainStatus) => {
       if (s === "confirmed") return "text-green-600";
       if (s === "pending") return "text-yellow-600";
@@ -140,8 +140,7 @@ export default function SendBatchComponent({
         </div>
         <div className="mt-4 space-y-1">
           <DetailRow label="Description" value={batch.batchDescription?.trim() || "—"} />
-          <DetailRow label="Owned by" value={batch.currentCompanyName ?? "—"} />
-          <DetailRow label="Created" value={new Date(batch.createdAt).toLocaleString()} />
+          <DetailRow label="Current company" value={batch.currentCompanyName ?? "—"} />
         </div>
       </div>
     );

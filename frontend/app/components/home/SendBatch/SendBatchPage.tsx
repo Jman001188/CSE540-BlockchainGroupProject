@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { Context } from "../../global/Context";
 import { BatchAPI, TransferBatchAPI } from "../../utils/apiclient";
-import type { BatchModel, BatchQrModel, RecipientQrModel, TransferModel } from "../../utils/types/models";
+import type { BatchQrModel, RecipientQrModel, TransferModel } from "../../utils/types/models";
 import SendBatchComponent from "./SendBatchComponent";
 import ViewTransfersComponent from "./ViewTransfersComponent";
 import { CreateTransferRequest } from "../../utils/types/api-contract";
@@ -40,21 +40,17 @@ export default function SendBatchPage() {
     if (batchId) {
       BatchAPI.getBatchById(batchId)
         .then((response) => {
-          const tempBatch: BatchQrModel= {  
-            ...response,
-            currentCompanyId: response.currentCompanyId,
-            currentCompanyName: response.currentCompanyName,
-            blockchain: {
-              blockchainBatchId: response.blockchain.blockchainBatchId,
-              transactionId: response.blockchain.transactionId,
-              status: response.blockchain.status,
-              dataHash: response.blockchain.dataHash,
-            },
+          const tempBatch: BatchQrModel = {
+            batchId: response.batchId,
+            batchName: response.batchName,
+            batchDescription: response.batchDescription ?? null,
+            currentCompanyName: response.currentCompanyName ?? response.registeringCompanyName,
+            blockchainStatus: response.blockchain?.status ?? "pending",
           };
           setCurrentStepForSending("scanRecipient");
           setProcessedItemData(tempBatch);
           setHasItemQrValue(true);
-          setIsValidBatch(tempBatch.blockchain?.status !== "failed");
+          setIsValidBatch(tempBatch.blockchainStatus !== "failed");
           console.log("Batch:", tempBatch);
         })
         .catch((error) => {
@@ -87,12 +83,11 @@ export default function SendBatchPage() {
     if (!result.trim()) return;
     try {
       const parsed = JSON.parse(result) as BatchQrModel;
-      if (!parsed?.batchId) throw new Error("Invalid batch QR payload");
+      if (!parsed?.batchId || !parsed.blockchainStatus) throw new Error("Invalid batch QR payload");
 
       setProcessedItemData(parsed);
       setHasItemQrValue(true);
-      const parsedStatus = parsed.blockchain?.status;
-      setIsValidBatch(parsedStatus !== "failed");
+      setIsValidBatch(parsed.blockchainStatus !== "failed");
     } catch (error) {
       console.error("Error processing Item QR result:", error);
       alert("Could not read item QR code. Please scan a valid batch QR.");

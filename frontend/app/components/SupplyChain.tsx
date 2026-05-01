@@ -103,7 +103,7 @@ export default function SupplyChain() {
             <div className="flex flex-row flex-wrap items-start gap-4">
                 {childBox}
                 <div className="min-w-0 flex-1 rounded-box border border-primary/25 bg-base-200/40 p-3">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral/55">
+                    <p className="card-title text-base">
                         Source batches
                     </p>
                     <div className="flex flex-row flex-nowrap items-start gap-3 overflow-x-auto pb-1">
@@ -170,8 +170,7 @@ export default function SupplyChain() {
                             <DetailRow label="Item ID" value={itemQrValue?.batchId ?? ""} />
                             <DetailRow label="Item Name" value={itemQrValue?.batchName ?? ""} />
                             <DetailRow label="Item Description" value={itemQrValue?.batchDescription ?? ""} />
-                            <DetailRow label="Status" value={itemQrValue?.blockchain?.status ?? ""} />
-                            <DetailRow label="Data Hash" value={itemQrValue?.blockchain?.dataHash ?? ""} />
+                            <DetailRow label="Status" value={itemQrValue?.blockchainStatus ?? ""} />
                         </div>
                         <button className="btn" onClick={getItemHistory}>View Item History</button>
                     </fieldset>

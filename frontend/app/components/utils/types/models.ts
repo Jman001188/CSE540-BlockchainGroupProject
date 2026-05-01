@@ -77,23 +77,13 @@ export interface TransferModel {
   createdAt: ISODateString;
 }
 
+/** Minimal fields embedded in batch QR codes (keeps payload small). */
 export interface BatchQrModel {
   batchId: Uuid;
   batchName: string;
   batchDescription: string | null;
-  createdAt: ISODateString;
-  registeringCompanyId: Uuid;
-  registeringCompanyName: string;
-  registeringUserId: Uuid;
-  registeringUserName: string;
-  currentCompanyId?: Uuid;
   currentCompanyName?: string;
-  blockchain: {
-    blockchainBatchId: number | null;
-    transactionId: string | null;
-    status: BatchBlockchainStatus;
-    dataHash: string | null;
-  };
+  blockchainStatus: BatchBlockchainStatus;
 }
 
 export interface RecipientQrModel {
